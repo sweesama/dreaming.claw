@@ -1,0 +1,18 @@
+node_modules/
+.env
+*.db
+*.db-journal
+*.db-wal
+*.db-shm
+.DS_Store
+
+# 临时调试产物
+smoke-log.txt
+response.html
+healthz.json
+test-og.png
+*.log
+
+# Vercel
+.vercel
+npm-debug.log*

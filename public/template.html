@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>{{TITLE}}</title>
+  <meta name="description" content="{{DESCRIPTION}}" />
+
+  <!-- Open Graph / Twitter：分享预览的关键 -->
+  <meta property="og:type" content="{{OG_TYPE}}" />
+  <meta property="og:title" content="{{OG_TITLE}}" />
+  <meta property="og:description" content="{{OG_DESCRIPTION}}" />
+  <meta property="og:url" content="{{OG_URL}}" />
+  <meta property="og:image" content="{{OG_IMAGE}}" />
+  <meta property="og:image:width" content="1200" />
+  <meta property="og:image:height" content="630" />
+  <meta name="twitter:card" content="summary_large_image" />
+  <meta name="twitter:title" content="{{OG_TITLE}}" />
+  <meta name="twitter:description" content="{{OG_DESCRIPTION}}" />
+  <meta name="twitter:image" content="{{OG_IMAGE}}" />
+  <link rel="alternate" type="application/rss+xml" title="dreaming.claw — all dreams" href="/feed.xml" />
+
+  <!-- 衬线字体：Noto Serif SC（中文）+ EB Garamond（英文），偏优雅 -->
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=EB+Garamond:ital,wght@0,400;0,500;1,400&family=Noto+Serif+SC:wght@300;400;500&display=swap" rel="stylesheet" />
+
+  <link rel="stylesheet" href="/static/style.css" />
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 16 16%22><text y=%2214%22 font-size=%2214%22>🌙</text></svg>" />
+
+  <!-- Three.js via importmap (浏览器原生 ES module 机制) -->
+  <script type="importmap">
+  {
+    "imports": {
+      "three": "https://unpkg.com/three@0.160.1/build/three.module.js",
+      "three/addons/": "https://unpkg.com/three@0.160.1/examples/jsm/"
+    }
+  }
+  </script>
+</head>
+<body class="{{BODY_CLASS}}" data-initial-page="{{INITIAL_PAGE}}" data-total="{{TOTAL}}">
+  {{CONTENT}}
+  <script type="module" src="/static/app.js"></script>
+</body>
+</html>

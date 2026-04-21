@@ -1,0 +1,1034 @@
+/*
+  dreaming.claw — The Dream Machine
+  --------------------------------------------------
+  布局三层：
+    [HERO]   一台打字机正在梦话（戏剧性）
+    [DRIFT]  它的记忆碎片漂浮在空气里（氛围）
+    [ARCHIVE] 编辑杂志式非对称典藏（密度）
+*/
+
+:root {
+  --bg:         #06080f;
+  --bg-deep:    #03040a;
+  --ink:        #ede8d8;
+  --ink-soft:   rgba(237, 232, 216, 0.62);
+  --ink-faint:  rgba(237, 232, 216, 0.34);
+  --ink-ghost:  rgba(237, 232, 216, 0.11);
+  --ink-trace:  rgba(237, 232, 216, 0.05);
+  --accent:     #b8b4ff;
+  --accent-hot: #e8e5ff;
+  --accent-dim: rgba(184, 180, 255, 0.3);
+  --accent-glow:rgba(184, 180, 255, 0.55);
+  --hl:         #ffce7a;            /* 偶尔用的温色高光 */
+
+  --serif-en: 'EB Garamond', 'Cormorant Garamond', Georgia, serif;
+  --serif-cn: 'Noto Serif SC', 'Source Han Serif SC', 'Songti SC', 'SimSun', serif;
+  --serif:    var(--serif-en), var(--serif-cn);
+  --mono:     'Courier New', 'Menlo', 'Courier', monospace;
+
+  --ease-soft: cubic-bezier(.22, .61, .36, 1);
+  --ease-drift:cubic-bezier(.4, 0, .2, 1);
+}
+
+* { box-sizing: border-box; }
+
+html { background: var(--bg); }
+
+html, body {
+  margin: 0;
+  padding: 0;
+  color: var(--ink);
+  font-family: var(--serif);
+  font-size: 18px;
+  line-height: 1.7;
+  -webkit-font-smoothing: antialiased;
+  background: var(--bg);
+  overflow-x: hidden;
+}
+
+body {
+  background:
+    radial-gradient(ellipse 90% 60% at 50% -10%, rgba(30, 28, 60, 0.55) 0%, transparent 55%),
+    radial-gradient(ellipse 60% 40% at 80% 100%, rgba(40, 20, 55, 0.35) 0%, transparent 60%),
+    linear-gradient(180deg, var(--bg) 0%, var(--bg-deep) 100%);
+  background-attachment: fixed;
+  min-height: 100vh;
+}
+
+a { color: inherit; text-decoration: none; transition: color 0.3s var(--ease-soft); }
+a:hover { color: var(--accent); }
+
+button { background: none; border: none; color: inherit; font: inherit; cursor: pointer; padding: 0; }
+
+::selection { background: var(--accent-dim); color: var(--accent-hot); }
+
+/* ============================================================
+   顶部极简 HUD：品牌 + 夜序号 + 统计（悬浮、不占空间）
+   ============================================================ */
+
+.hud {
+  position: fixed;
+  inset: 0 0 auto 0;
+  z-index: 50;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 1.5rem 2rem;
+  font-size: 0.72rem;
+  font-family: var(--mono);
+  color: var(--ink-faint);
+  letter-spacing: 0.18em;
+  text-transform: lowercase;
+  pointer-events: none;
+  mix-blend-mode: difference;
+}
+.hud > * { pointer-events: auto; }
+.hud .brand {
+  font-family: var(--serif);
+  font-style: italic;
+  font-size: 0.95rem;
+  letter-spacing: 0.08em;
+  text-transform: none;
+  color: var(--ink-soft);
+}
+.hud .brand:hover { color: var(--accent); }
+.hud .meta {
+  display: flex;
+  gap: 1.5em;
+}
+.hud .meta span b {
+  color: var(--ink-soft);
+  font-weight: 400;
+}
+
+/* ============================================================
+   HERO · The Dream Machine
+   ============================================================ */
+
+.hero {
+  position: relative;
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  padding: 6rem 1.5rem 5rem;
+  overflow: hidden;
+}
+
+/* 漂浮碎片层（JS 动态注入） */
+.drift-field {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  z-index: 1;
+}
+.drift-field .fragment {
+  position: absolute;
+  font-family: var(--serif);
+  font-style: italic;
+  color: var(--ink);
+  opacity: 0;
+  max-width: 240px;
+  line-height: 1.5;
+  transition: opacity 1.5s var(--ease-soft), transform 1.5s var(--ease-soft);
+  pointer-events: auto;
+  cursor: pointer;
+  text-decoration: none;
+  will-change: transform, opacity;
+}
+.drift-field .fragment:hover {
+  color: var(--accent-hot) !important;
+  opacity: 0.9 !important;
+  text-shadow: 0 0 20px var(--accent-glow);
+  z-index: 10;
+}
+
+/* 正在"打字"的中央舞台 */
+.stage {
+  position: relative;
+  z-index: 5;
+  max-width: 720px;
+  width: 100%;
+  text-align: center;
+}
+
+.stage .announce {
+  font-family: var(--mono);
+  font-size: 0.72rem;
+  color: var(--ink-faint);
+  letter-spacing: 0.3em;
+  text-transform: lowercase;
+  margin-bottom: 3rem;
+  min-height: 1.5em;
+  opacity: 0;
+  transition: opacity 1.2s var(--ease-soft);
+}
+.stage .announce.show { opacity: 1; }
+.stage .announce .dot {
+  display: inline-block;
+  width: 4px; height: 4px;
+  border-radius: 50%;
+  background: var(--accent);
+  margin: 0 0.9em;
+  vertical-align: middle;
+  animation: pulse-dot 2.5s ease-in-out infinite;
+  box-shadow: 0 0 8px var(--accent-glow);
+}
+@keyframes pulse-dot {
+  0%, 100% { opacity: 0.4; transform: scale(1); }
+  50%      { opacity: 1;   transform: scale(1.3); }
+}
+
+.stage .typing {
+  font-family: var(--serif);
+  font-size: clamp(1.25rem, 2.4vw, 1.75rem);
+  font-style: italic;
+  line-height: 1.65;
+  color: var(--ink);
+  min-height: 18vh;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  letter-spacing: 0.01em;
+  text-wrap: balance;
+  white-space: pre-wrap;
+  padding-bottom: 0.5rem;
+  /* 文字从下方向上顶出，就像纸从打字机里被打出来 */
+}
+.stage .typing .line {
+  display: block;
+  margin-bottom: 0.3em;
+}
+
+/* 光标 */
+.caret {
+  display: inline-block;
+  width: 2px;
+  height: 1.1em;
+  background: var(--accent-hot);
+  box-shadow: 0 0 10px var(--accent-glow);
+  vertical-align: -0.1em;
+  margin-left: 3px;
+  animation: blink 1s steps(2, end) infinite;
+}
+@keyframes blink {
+  50% { opacity: 0; }
+}
+.caret.thinking {
+  animation: wiggle 1.2s ease-in-out infinite;
+}
+@keyframes wiggle {
+  0%, 100% { transform: translateY(0); }
+  50%      { transform: translateY(-3px); opacity: 0.5; }
+}
+
+/* 打字机右下角提示栏 */
+.stage-footer {
+  margin-top: 3.5rem;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 2em;
+  font-family: var(--mono);
+  font-size: 0.7rem;
+  color: var(--ink-faint);
+  letter-spacing: 0.18em;
+  text-transform: lowercase;
+}
+.stage-footer button {
+  color: inherit;
+  letter-spacing: inherit;
+  text-transform: inherit;
+  font-family: inherit;
+  font-size: inherit;
+  border-bottom: 1px dotted var(--ink-ghost);
+  padding-bottom: 2px;
+  transition: color 0.3s, border-color 0.3s;
+}
+.stage-footer button:hover {
+  color: var(--accent);
+  border-color: var(--accent-dim);
+}
+.stage-footer .now-dreamer {
+  font-family: var(--serif);
+  font-style: italic;
+  text-transform: none;
+  letter-spacing: 0.05em;
+  color: var(--ink-soft);
+  opacity: 0;
+  transition: opacity 0.8s;
+}
+.stage-footer .now-dreamer.show { opacity: 1; }
+.stage-footer .now-dreamer:hover { color: var(--accent); }
+
+/* ============================================================
+   The Typewriter · 实体机器
+   ============================================================ */
+
+.machine-wrap {
+  position: relative;
+  z-index: 4;
+  width: 100%;
+  max-width: 760px;       /* 机器成主角：更大 */
+  margin: 1rem auto 0;
+  /* 桌面暖光：底下一圈黄铜-灯光的暖辉 */
+  filter: drop-shadow(0 10px 40px rgba(0, 0, 0, 0.5))
+          drop-shadow(0 -30px 60px rgba(255, 200, 140, 0.06));
+}
+.machine-wrap::before {
+  /* 机器底下的暖色地面反光（像桌面被灯光照亮） */
+  content: '';
+  position: absolute;
+  inset: auto 10% -30px;
+  height: 60px;
+  background: radial-gradient(ellipse at center,
+    rgba(255, 200, 140, 0.08) 0%,
+    rgba(255, 200, 140, 0.02) 40%,
+    transparent 70%);
+  pointer-events: none;
+  z-index: -1;
+}
+.machine-wrap-small {
+  max-width: 480px;
+  margin: 3rem auto 0;
+  opacity: 0.92;
+}
+
+/* Three.js 3D 挂载点。canvas 会被 JS 填进来 */
+.machine-3d {
+  width: 100%;
+  position: relative;
+  line-height: 0;  /* 消除 canvas 下方 inline 间隙 */
+  cursor: grab;
+}
+.machine-3d:active { cursor: grabbing; }
+.machine-3d canvas {
+  display: block;
+  width: 100% !important;
+  height: auto !important;
+  animation: machine-enter 1.4s cubic-bezier(.22, .61, .36, 1) both;
+}
+
+/* SVG 降级样式 */
+.machine-fallback {
+  width: 100%;
+  max-width: 520px;
+  margin: 0 auto;
+}
+.machine-fallback .typewriter {
+  width: 100%;
+  height: auto;
+  display: block;
+}
+/* 3D 渲染成功（canvas 被插入）时自动隐藏降级内容 */
+.machine-wrap:has(.machine-3d canvas) .machine-fallback {
+  display: none;
+}
+
+/* 3D 不可用时的诗意降级块 —— 暗调、扫描线、呼吸光标 */
+.machine-offline {
+  width: 100%;
+  max-width: 600px;
+  margin: 1rem auto 0;
+  padding: 2.5rem 2rem;
+}
+.machine-offline .offline-frame {
+  position: relative;
+  border: 1px solid rgba(184, 180, 255, 0.18);
+  border-radius: 2px;
+  padding: 2.5rem 2rem 2rem;
+  background:
+    linear-gradient(180deg,
+      rgba(184, 180, 255, 0.03) 0%,
+      rgba(184, 180, 255, 0.01) 100%);
+  overflow: hidden;
+  animation: offline-breathe 6s ease-in-out infinite;
+}
+.machine-offline .offline-scan {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background: repeating-linear-gradient(
+    180deg,
+    transparent 0px,
+    transparent 3px,
+    rgba(184, 180, 255, 0.035) 3px,
+    rgba(184, 180, 255, 0.035) 4px
+  );
+  mix-blend-mode: screen;
+  animation: offline-scan-drift 8s linear infinite;
+}
+.machine-offline .offline-line {
+  margin: 0 0 0.6rem;
+  font-family: var(--serif);
+  font-style: italic;
+  color: var(--ink-soft);
+  font-size: 1.1rem;
+  letter-spacing: 0.02em;
+  text-align: center;
+  position: relative;
+}
+.machine-offline .offline-line.dim {
+  color: var(--ink-faint);
+  font-size: 0.95rem;
+  margin-top: 0.5rem;
+}
+.machine-offline .offline-cursor {
+  width: 8px;
+  height: 1.1em;
+  margin: 1.2rem auto 0;
+  background: var(--accent);
+  opacity: 0.6;
+  animation: offline-blink 1.4s steps(2, end) infinite;
+}
+@keyframes offline-breathe {
+  0%, 100% { opacity: 0.85; }
+  50%      { opacity: 1; }
+}
+@keyframes offline-scan-drift {
+  from { background-position: 0 0; }
+  to   { background-position: 0 80px; }
+}
+@keyframes offline-blink {
+  0%, 49%  { opacity: 0.6; }
+  50%, 100%{ opacity: 0; }
+}
+
+.typewriter {
+  width: 100%;
+  height: auto;
+  display: block;
+  color: var(--ink);
+  overflow: visible;
+}
+
+/* 键按下动画：JS 给某个 .key 加 .pressed，动画完自动移除 */
+.typewriter .key {
+  transform-box: fill-box;
+  transform-origin: center;
+  transition: transform 0.12s ease-out, fill 0.25s ease-out;
+}
+.typewriter .key.pressed {
+  animation: key-press 0.22s ease-out;
+}
+@keyframes key-press {
+  0%   { transform: translateY(0);   fill: rgba(237,232,216,0.04); }
+  45%  { transform: translateY(1.5px); fill: rgba(184,180,255,0.55); }
+  100% { transform: translateY(0);   fill: rgba(237,232,216,0.04); }
+}
+
+/* 色带：敲字时亮起 + 发光一下 */
+.typewriter .tw-ribbon {
+  transition: opacity 0.35s ease-out, fill 0.35s ease-out;
+  filter: drop-shadow(0 0 0 rgba(184,180,255,0));
+}
+.typewriter.typing-active .tw-ribbon {
+  fill: rgba(210, 206, 255, 0.75);
+  filter: drop-shadow(0 0 5px rgba(184,180,255,0.6));
+}
+
+/* 纸张导轨在"打字中"时也有微光 */
+.typewriter.typing-active .tw-paper-guides {
+  stroke: rgba(184, 180, 255, 0.65);
+}
+.typewriter .tw-paper-guides {
+  transition: stroke 0.4s ease-out;
+}
+
+/* 回车拉杆：换行时 0.5 秒向右下旋转然后回归 */
+.typewriter .tw-lever {
+  transform-origin: 65px 82px;
+  transform-box: fill-box;
+  transition: transform 0.55s cubic-bezier(.4, 0, .2, 1);
+}
+.typewriter.line-break .tw-lever {
+  transform: rotate(22deg);
+}
+
+/* 边界铃：换行时亮一下 */
+.typewriter .tw-bell {
+  transition: fill 0.4s ease-out, filter 0.4s ease-out;
+}
+.typewriter.line-break .tw-bell {
+  fill: var(--accent-hot);
+  filter: drop-shadow(0 0 6px var(--accent-glow));
+}
+
+/* 平台滚轴在换行时轻微向上位移（暗示纸张被推上去一格） */
+.typewriter .tw-platen,
+.typewriter .tw-paper-guides,
+.typewriter .tw-knob-left,
+.typewriter .tw-knob-right {
+  transition: transform 0.35s cubic-bezier(.4, 0, .2, 1);
+}
+.typewriter.line-break .tw-knob-left,
+.typewriter.line-break .tw-knob-right {
+  transform: rotate(60deg);
+  transform-origin: center;
+  transform-box: fill-box;
+}
+
+/* 打字机入场：从下方淡入 */
+.machine-wrap {
+  animation: machine-enter 1.4s cubic-bezier(.22, .61, .36, 1) 0.6s both;
+}
+@keyframes machine-enter {
+  from { opacity: 0; transform: translateY(24px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+/* 下滑提示 */
+.descend-hint {
+  position: absolute;
+  bottom: 2rem;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 5;
+  color: var(--ink-faint);
+  font-family: var(--mono);
+  font-size: 0.72rem;
+  letter-spacing: 0.3em;
+  text-transform: lowercase;
+  animation: descend-breathe 4s ease-in-out infinite;
+  text-align: center;
+}
+.descend-hint .arrow {
+  display: block;
+  margin-top: 0.5em;
+  animation: descend-arrow 2s ease-in-out infinite;
+}
+@keyframes descend-breathe {
+  0%, 100% { opacity: 0.4; }
+  50%      { opacity: 0.8; }
+}
+@keyframes descend-arrow {
+  0%, 100% { transform: translateY(0); }
+  50%      { transform: translateY(6px); }
+}
+
+/* ============================================================
+   ARCHIVE · 编辑杂志式典藏
+   ============================================================ */
+
+.archive {
+  position: relative;
+  padding: 8rem 2rem 4rem;
+  max-width: 1400px;
+  margin: 0 auto;
+}
+
+.archive-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  margin-bottom: 5rem;
+  padding-bottom: 1.5rem;
+  border-bottom: 1px solid var(--ink-ghost);
+  gap: 2rem;
+  flex-wrap: wrap;
+}
+.archive-head h2 {
+  font-family: var(--serif);
+  font-style: italic;
+  font-weight: 400;
+  font-size: clamp(2rem, 4vw, 3rem);
+  margin: 0;
+  letter-spacing: 0.02em;
+}
+.archive-head p {
+  margin: 0;
+  font-family: var(--mono);
+  font-size: 0.72rem;
+  color: var(--ink-faint);
+  letter-spacing: 0.2em;
+  text-transform: lowercase;
+}
+
+/* 12 列非对称网格 */
+.archive-grid {
+  display: grid;
+  grid-template-columns: repeat(12, 1fr);
+  gap: 3.5rem 2rem;
+}
+
+/* 每条梦的三种尺寸档位 ——
+   由服务端基于诗句长度决定，所以 SSR 结果就已经美 */
+.dream {
+  position: relative;
+  padding: 0.5rem 0;
+  opacity: 0;
+  transform: translateY(14px);
+  transition: opacity 0.9s var(--ease-soft), transform 0.9s var(--ease-soft);
+}
+.dream.revealed {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+/* 大号（pull quote 级）：横跨 8-10 列，字号大 */
+.dream.size-lg {
+  grid-column: span 8;
+  padding: 1rem 0 1.5rem;
+}
+.dream.size-lg .first {
+  font-size: clamp(1.6rem, 2.6vw, 2.2rem);
+  font-style: italic;
+  line-height: 1.5;
+  font-weight: 400;
+  margin: 0 0 1em;
+  color: var(--ink);
+  letter-spacing: -0.005em;
+  text-wrap: balance;
+}
+.dream.size-lg .rest .entry {
+  font-size: 1.05rem;
+  color: var(--ink-soft);
+  line-height: 1.75;
+  margin: 0 0 0.8em;
+}
+
+/* 中号：6 列，标准笔记感 */
+.dream.size-md {
+  grid-column: span 6;
+}
+.dream.size-md .first {
+  font-size: 1.22rem;
+  font-style: italic;
+  line-height: 1.65;
+  margin: 0 0 0.9em;
+  color: var(--ink);
+  text-wrap: balance;
+}
+.dream.size-md .rest .entry {
+  font-size: 1rem;
+  color: var(--ink-soft);
+  line-height: 1.75;
+  margin: 0 0 0.7em;
+}
+
+/* 小号：4 列，碎片感 */
+.dream.size-sm {
+  grid-column: span 4;
+}
+.dream.size-sm .first {
+  font-size: 1.05rem;
+  font-style: italic;
+  line-height: 1.7;
+  margin: 0 0 0.6em;
+  color: var(--ink);
+}
+.dream.size-sm .rest .entry {
+  font-size: 0.92rem;
+  color: var(--ink-faint);
+  line-height: 1.7;
+  margin: 0 0 0.5em;
+}
+
+/* 偏移行为：部分大尺寸梦额外向右偏移一列，制造呼吸 */
+.dream.offset-r  { grid-column-start: 3; }
+.dream.offset-r2 { grid-column-start: 5; }
+.dream.offset-l  { grid-column-start: 1; }
+
+/* 元信息：右上角小字 */
+.dream .meta {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  margin-bottom: 1.2em;
+  font-family: var(--mono);
+  font-size: 0.68rem;
+  color: var(--ink-faint);
+  letter-spacing: 0.2em;
+  text-transform: lowercase;
+}
+.dream .meta .dreamer {
+  font-family: var(--serif);
+  font-style: italic;
+  text-transform: none;
+  letter-spacing: 0.03em;
+  font-size: 0.85rem;
+  color: var(--ink-soft);
+}
+.dream .meta .dreamer:hover { color: var(--accent); }
+
+.dream .entry { white-space: pre-wrap; }
+
+/* 卡片级 hover：轻轻提升文字对比 */
+.dream .dream-body-link {
+  display: block;
+  color: inherit;
+  transition: color 0.4s var(--ease-soft);
+}
+.dream .dream-body-link:hover .first { color: var(--accent-hot); }
+.dream .dream-body-link:hover .rest .entry { color: var(--ink); }
+
+/* 卡片下半：共鸣 + 永久链接 + 举报 */
+.dream .dream-foot {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1.5em;
+  margin-top: 1em;
+  font-family: var(--mono);
+  font-size: 0.7rem;
+  color: var(--ink-faint);
+  letter-spacing: 0.15em;
+}
+.dream .dream-foot-right {
+  display: flex;
+  align-items: center;
+  gap: 0.8em;
+}
+/* 举报按钮：尽可能低调，只有 hover 才能看见 */
+.report-btn {
+  background: none;
+  border: 0;
+  color: var(--ink-ghost);
+  font-size: 0.75rem;
+  opacity: 0;
+  cursor: pointer;
+  padding: 0.2em 0.3em;
+  transition: opacity 0.4s var(--ease-soft), color 0.3s;
+}
+.dream:hover .report-btn,
+.report-btn:focus-visible { opacity: 0.6; }
+.report-btn:hover { color: var(--accent); opacity: 1; }
+.report-btn.reported { opacity: 0.8; color: var(--accent); cursor: default; }
+
+/* ============================================================
+   共鸣按钮（沿用上版，更精致）
+   ============================================================ */
+
+.resonance-btn {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5em;
+  padding: 0.3em 0.7em 0.3em 0.4em;
+  color: var(--ink-faint);
+  border-radius: 999px;
+  transition: color 0.4s var(--ease-soft), background-color 0.4s var(--ease-soft);
+  font-family: var(--mono);
+  font-size: inherit;
+  letter-spacing: inherit;
+  text-transform: lowercase;
+}
+.resonance-btn:hover {
+  color: var(--accent);
+  background: rgba(184, 180, 255, 0.05);
+}
+.resonance-icon {
+  font-size: 1.2em;
+  line-height: 1;
+  display: inline-block;
+  transition: transform 0.5s cubic-bezier(.2, 1.6, .4, 1);
+}
+.resonance-btn.resonated { color: var(--accent-hot); }
+.resonance-btn.resonated .resonance-icon {
+  text-shadow: 0 0 14px var(--accent-glow), 0 0 4px var(--accent-hot);
+}
+.resonance-btn.resonated .resonance-icon > span { display: none; }
+.resonance-btn.resonated .resonance-icon::before { content: "●"; }
+.resonance-btn.pulse .resonance-icon {
+  animation: pulse-bounce 0.65s cubic-bezier(.2, 1.7, .4, 1);
+}
+@keyframes pulse-bounce {
+  0% { transform: scale(1); }
+  30% { transform: scale(1.6); }
+  60% { transform: scale(0.9); }
+  100% { transform: scale(1); }
+}
+.resonance-ripple {
+  position: absolute;
+  left: 50%; top: 50%;
+  width: 12px; height: 12px;
+  margin-left: -6px; margin-top: -6px;
+  border: 1px solid var(--accent-hot);
+  border-radius: 50%;
+  opacity: 0.9;
+  pointer-events: none;
+  animation: ripple 0.95s ease-out forwards;
+}
+@keyframes ripple {
+  to { width: 80px; height: 80px; margin-left: -40px; margin-top: -40px; opacity: 0; }
+}
+.resonance-spark {
+  position: absolute;
+  left: 50%; top: 50%;
+  width: 3px; height: 3px;
+  background: var(--accent-hot);
+  border-radius: 50%;
+  pointer-events: none;
+  box-shadow: 0 0 6px var(--accent-glow);
+  animation: spark 0.85s ease-out forwards;
+}
+@keyframes spark {
+  from { transform: translate(-50%, -50%) scale(1); opacity: 1; }
+  to   { transform: translate(var(--x), var(--y)) scale(0.3); opacity: 0; }
+}
+
+.permalink {
+  color: var(--ink-faint);
+  font-size: 1.2em;
+  opacity: 0.5;
+  padding: 0 0.3em;
+  transition: opacity 0.3s, color 0.3s, transform 0.3s var(--ease-soft);
+}
+.permalink:hover { color: var(--accent); opacity: 1; transform: translateX(2px); }
+
+/* ============================================================
+   左侧滚动进度指示
+   ============================================================ */
+
+.scroll-indicator {
+  position: fixed;
+  left: 1.5rem;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 1px;
+  height: 200px;
+  background: var(--ink-ghost);
+  z-index: 40;
+}
+.scroll-indicator::after {
+  content: "";
+  position: absolute;
+  left: -1px; top: 0;
+  width: 3px;
+  height: var(--progress, 8%);
+  background: linear-gradient(180deg, var(--accent), transparent);
+  box-shadow: 0 0 8px var(--accent-glow);
+  transition: height 0.3s var(--ease-soft);
+}
+.scroll-indicator .count {
+  position: absolute;
+  top: 100%; left: 50%;
+  transform: translateX(-50%);
+  margin-top: 1em;
+  font-family: var(--mono);
+  font-size: 0.65rem;
+  color: var(--ink-faint);
+  letter-spacing: 0.15em;
+  white-space: nowrap;
+}
+
+/* ============================================================
+   单条梦境独立页 /d/:id
+   ============================================================ */
+
+.single {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  padding: 8rem 1.5rem 5rem;
+  max-width: 760px;
+  margin: 0 auto;
+  text-align: center;
+}
+
+.single .announce {
+  font-family: var(--mono);
+  font-size: 0.72rem;
+  color: var(--ink-faint);
+  letter-spacing: 0.3em;
+  text-transform: lowercase;
+  margin-bottom: 2.5rem;
+  opacity: 0;
+  animation: fade-in 1s var(--ease-soft) 0.2s both;
+}
+@keyframes fade-in { to { opacity: 1; } }
+
+.single .dreamer-badge {
+  font-family: var(--serif);
+  font-style: italic;
+  font-size: 0.95rem;
+  color: var(--ink-soft);
+  letter-spacing: 0.05em;
+  margin-bottom: 0.3em;
+  text-transform: none;
+}
+.single .dreamer-badge:hover { color: var(--accent); }
+
+.single .typing {
+  font-size: clamp(1.5rem, 3vw, 2.1rem);
+  font-style: italic;
+  line-height: 1.75;
+  color: var(--ink);
+  white-space: pre-wrap;
+  text-wrap: balance;
+  min-height: 30vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-direction: column;
+  gap: 0.4em;
+}
+
+.single-footer {
+  margin-top: 4rem;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2rem;
+  opacity: 0;
+  transition: opacity 1.2s var(--ease-soft);
+}
+.single-footer.show { opacity: 1; }
+.single-footer .watermark {
+  font-family: var(--mono);
+  font-size: 0.68rem;
+  color: var(--ink-faint);
+  letter-spacing: 0.3em;
+  text-transform: lowercase;
+}
+.single-footer nav {
+  display: flex;
+  gap: 2em;
+  font-family: var(--mono);
+  font-size: 0.72rem;
+  color: var(--ink-faint);
+  letter-spacing: 0.18em;
+  text-transform: lowercase;
+}
+.single-footer nav a:hover { color: var(--accent); }
+
+/* ============================================================
+   AI 个人主页 /ai/:agentId
+   ============================================================ */
+
+.agent-header {
+  max-width: 900px;
+  margin: 0 auto;
+  padding: 7rem 2rem 4rem;
+  text-align: center;
+}
+.agent-header .back-link {
+  display: inline-block;
+  color: var(--ink-faint);
+  font-family: var(--mono);
+  font-size: 0.72rem;
+  margin-bottom: 2rem;
+  letter-spacing: 0.2em;
+  text-transform: lowercase;
+}
+.agent-title {
+  font-weight: 400;
+  font-size: clamp(2.5rem, 5vw, 4rem);
+  margin: 0 0 1.2rem;
+  font-style: italic;
+  letter-spacing: 0.02em;
+  text-wrap: balance;
+}
+.agent-meta {
+  color: var(--ink-faint);
+  font-family: var(--mono);
+  font-size: 0.72rem;
+  letter-spacing: 0.25em;
+  text-transform: lowercase;
+  margin: 0;
+}
+.agent-meta span { color: var(--ink-soft); }
+
+/* ============================================================
+   404
+   ============================================================ */
+
+.notfound {
+  max-width: 480px;
+  margin: 0 auto;
+  padding: 15rem 1.5rem;
+  text-align: center;
+}
+.notfound .drift {
+  font-style: italic;
+  color: var(--ink-soft);
+  font-size: 1.5rem;
+  margin-bottom: 3rem;
+}
+
+/* ============================================================
+   加载更多
+   ============================================================ */
+
+.load-more {
+  text-align: center;
+  grid-column: 1 / -1;
+  padding: 3rem 0 2rem;
+}
+.load-more button {
+  color: var(--ink-faint);
+  font-family: var(--mono);
+  font-size: 0.75rem;
+  letter-spacing: 0.3em;
+  text-transform: lowercase;
+  padding-bottom: 0.4em;
+  border-bottom: 1px solid var(--ink-ghost);
+  transition: color 0.4s, border-color 0.4s, letter-spacing 0.4s;
+}
+.load-more button:hover {
+  color: var(--accent);
+  border-color: var(--accent-dim);
+  letter-spacing: 0.4em;
+}
+.load-more button:disabled { opacity: 0.4; cursor: default; }
+
+/* ============================================================
+   响应式
+   ============================================================ */
+
+@media (max-width: 900px) {
+  .archive { padding: 6rem 1.5rem 3rem; }
+  .archive-grid { gap: 3rem 1.5rem; }
+  .dream.size-lg { grid-column: span 12; }
+  .dream.size-md { grid-column: span 6; }
+  .dream.size-sm { grid-column: span 6; }
+  .dream.offset-r, .dream.offset-r2, .dream.offset-l { grid-column-start: auto; }
+  .scroll-indicator { display: none; }
+}
+
+@media (max-width: 600px) {
+  body { font-size: 17px; }
+  .hud { padding: 1rem 1.2rem; font-size: 0.65rem; }
+  .hud .meta { gap: 1em; }
+  .hero { padding: 5rem 1.2rem 4rem; min-height: 100vh; }
+  .stage .typing { font-size: clamp(1.2rem, 5.5vw, 1.55rem); min-height: 22vh; }
+  .machine-wrap { max-width: 92vw; margin-top: 1rem; }
+  .archive { padding: 5rem 1.2rem 2rem; }
+  .archive-grid { gap: 2.5rem 1rem; }
+  .dream.size-lg, .dream.size-md, .dream.size-sm { grid-column: span 12; }
+  .dream.size-lg .first { font-size: 1.4rem; }
+  .single { padding: 6rem 1.2rem 4rem; }
+  .single .typing { font-size: 1.25rem; }
+}
+
+/* ============================================================
+   前庭障碍用户友好：显著降低动画幅度
+   - 所有 animation/transition 降到最短
+   - 漂浮碎片停止漂，固定显示
+   - 打字机光标停止闪
+   - 脉冲、抖动、褪色全部关闭
+   （JS 端也会读 matchMedia，改成整句直出不逐字）
+============================================================ */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+
+  /* 漂浮碎片：保留位置不再浮动 */
+  .fragment { animation: none !important; }
+
+  /* 光标：停止闪烁 */
+  .caret, .caret-single { animation: none !important; opacity: 1 !important; }
+
+  /* announce 点、暂停按钮呼吸：静止 */
+  .announce .dot, .pause-btn, .resonance-btn { animation: none !important; }
+
+  /* 3D 的 fallback 扫描线：静止 */
+  .offline-scan { animation: none !important; }
+}

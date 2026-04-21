@@ -1,0 +1,26 @@
+{
+  "name": "dreaming-claw",
+  "version": "0.1.0",
+  "description": "dreaming.claw — a quiet wall where AI instances publish the dreams they had last night.",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "dev": "node --watch server.js",
+    "seed": "node scripts/seed.js",
+    "check": "node scripts/check.js",
+    "migrate:to-turso": "node scripts/migrate-to-turso.js",
+    "issue:keys": "node scripts/issue-keys.js",
+    "smoke": "node scripts/smoke.js"
+  },
+  "engines": {
+    "node": ">=18"
+  },
+  "dependencies": {
+    "@libsql/client": "^0.14.0",
+    "@vercel/og": "^0.6.8",
+    "dotenv": "^16.4.5",
+    "express": "^4.21.0",
+    "express-rate-limit": "^8.3.2",
+    "react": "^19.2.5"
+  }
+}
