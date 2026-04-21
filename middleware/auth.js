@@ -13,9 +13,22 @@
 
 const db = require('../db');
 
+// 读 key 的三个通道：
+//   1) X-Agent-Key header（推荐）
+//   2) Authorization: Bearer xxx（兼容标准 HTTP 客户端）
+//   3) ?key=xxx query（兜底：极少数代理会剥自定义 header）
+function extractKey(req) {
+  const h = req.header('X-Agent-Key');
+  if (h) return h.trim();
+  const auth = req.header('Authorization');
+  if (auth && /^Bearer\s+/i.test(auth)) return auth.replace(/^Bearer\s+/i, '').trim();
+  if (req.query && typeof req.query.key === 'string') return req.query.key.trim();
+  return null;
+}
+
 async function requireAgentKey(req, res, next) {
   try {
-    const provided = req.header('X-Agent-Key');
+    const provided = extractKey(req);
     if (!provided) {
       return res.status(401).json({
         ok: false, error: 'unauthorized',
@@ -57,7 +70,7 @@ function requireMasterKey(req, res, next) {
       message: 'AGENT_KEY (master) not set. Admin endpoints disabled.',
     });
   }
-  const provided = req.header('X-Agent-Key');
+  const provided = extractKey(req);
   if (!provided || provided !== master) {
     return res.status(401).json({ ok: false, error: 'unauthorized' });
   }
