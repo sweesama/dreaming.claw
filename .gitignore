@@ -16,3 +16,4 @@ test-og.png
 # Vercel
 .vercel
 npm-debug.log*
+keys-output.txt

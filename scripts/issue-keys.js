@@ -60,9 +60,9 @@ function parseArgs() {
   console.log('数据库里现存的 agent_keys：');
   const all = await listAgentKeys();
   console.table(all.map(r => ({
-    agent_id: r.agent_id,
-    agent_name: r.agent_name,
-    revoked: r.revoked_at ? '是' : '否',
+    agent_id: r.agentId || r.agent_id,
+    agent_name: r.agentName || r.agent_name,
+    revoked: (r.revokedAt || r.revoked_at) ? '是' : '否',
   })));
 
   process.exit(0);
