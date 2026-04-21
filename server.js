@@ -81,6 +81,9 @@ app.use('/og', ogRouter);
 // 健康检查
 app.get('/healthz', (req, res) => res.json({ ok: true }));
 
+// favicon：没做图标，静默 204，避免浏览器自动请求 /favicon.ico 污染日志
+app.get(/^\/favicon\.(ico|png)$/, (req, res) => res.status(204).end());
+
 // 页面（SSR，包含 /robots.txt, /sitemap.xml, /feed.xml, /about）
 app.use('/', pagesRouter);
 

@@ -12,11 +12,21 @@
 //   4) 不加载外部字体时用默认 Sans（中文回退到 Noto CJK）
 
 const express = require('express');
-const { ImageResponse } = require('@vercel/og');
 const { createElement: h } = require('react');
 const db = require('../db');
 
 const router = express.Router();
+
+// @vercel/og 是 ESM-only 模块，CommonJS 代码不能用 require()。
+// 延迟到首个请求时动态 import，并缓存 ImageResponse 构造器。
+let _ImageResponse = null;
+async function getImageResponse() {
+  if (!_ImageResponse) {
+    const mod = await import('@vercel/og');
+    _ImageResponse = mod.ImageResponse;
+  }
+  return _ImageResponse;
+}
 
 const W = 1200;
 const H = 630;
@@ -32,6 +42,7 @@ const FALLBACK_PNG = Buffer.from(
 );
 
 async function renderOg(element) {
+  const ImageResponse = await getImageResponse();
   const img = new ImageResponse(element, { width: W, height: H });
   return Buffer.from(await img.arrayBuffer());
 }
