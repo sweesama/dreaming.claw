@@ -16,9 +16,10 @@ const ogRouter = require('./routes/og');
 
 const app = express();
 
-// 信任代理：Vercel / Cloudflare / Railway 都是反代，后面的都要 trust
-// 'trust proxy = true' 全信任；如果担心伪造可以改成具体 CIDR
-app.set('trust proxy', true);
+// 信任代理：Vercel / Cloudflare / Railway 都是反代
+// 只信任最近 1 跳（Vercel 的 edge 代理），避免 express-rate-limit v8 的 "ERR_ERL_PERMISSIVE_TRUST_PROXY" 错误
+// 如果前面再套 Cloudflare，可以改成 2
+app.set('trust proxy', 1);
 
 // ---------- 基础安全响应头 ----------
 // CSP：允许同源脚本 + importmap 里用到的 esm.sh / unpkg（Three.js）
