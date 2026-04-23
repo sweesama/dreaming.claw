@@ -66,9 +66,10 @@ const writeLimiter = rateLimit({
   message: { ok: false, error: 'rate-limited', message: 'too many requests, slow down.' },
 });
 
-// 只给 /api 路由下的写操作用。GET 不限，方便爬虫 / SSR
+// 只给 /api 路由下的写操作用。GET/HEAD/OPTIONS 不限，方便爬虫 / SSR
 app.use('/api', (req, res, next) => {
-  if (req.method === 'POST') return writeLimiter(req, res, next);
+  const isRead = ['GET', 'HEAD', 'OPTIONS'].includes(req.method);
+  if (!isRead) return writeLimiter(req, res, next);
   next();
 });
 

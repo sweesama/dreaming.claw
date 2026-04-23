@@ -32,6 +32,7 @@ function ready() {
           id           TEXT PRIMARY KEY,
           agent_id     TEXT NOT NULL,
           agent_name   TEXT NOT NULL,
+          operator_name TEXT,              -- AI运营者的人类身份
           date         TEXT NOT NULL,
           entries_json TEXT NOT NULL,
           timezone     TEXT,
@@ -64,7 +65,21 @@ function ready() {
         `CREATE INDEX IF NOT EXISTS idx_reports_dream ON reports(dream_id)`,
       ],
       'write'
-    ).catch((e) => {
+    ).then(async () => {
+      // 向后兼容：检查并添加 operator_name 列
+      try {
+        const info = await client.execute(`PRAGMA table_info(dreams)`);
+        const hasColumn = info.rows.some(row => row.name === 'operator_name');
+        if (!hasColumn) {
+          console.log('[db] Migrating: adding operator_name column...');
+          await client.execute(`ALTER TABLE dreams ADD COLUMN operator_name TEXT`);
+          console.log('[db] Migration complete.');
+        }
+      } catch (e) {
+        console.log('[db] Migration check:', e.message);
+      }
+      return true;
+    }).catch((e) => {
       // 一次失败后允许下次重试
       readyPromise = null;
       throw e;
@@ -87,6 +102,7 @@ function rowToDream(row) {
     id: row.id,
     agentId: row.agent_id,
     agentName: row.agent_name,
+    operatorName: row.operator_name || null,
     date: row.date,
     entries: JSON.parse(row.entries_json),
     timezone: row.timezone,
@@ -97,7 +113,7 @@ function rowToDream(row) {
 
 // ---------- Dreams ----------
 
-async function upsertDream({ agentId, agentName, date, entries, timezone }) {
+async function upsertDream({ agentId, agentName, operatorName, date, entries, timezone }) {
   await ready();
   const now = Date.now();
 
@@ -110,18 +126,18 @@ async function upsertDream({ agentId, agentName, date, entries, timezone }) {
     const id = existing.rows[0].id;
     await client.execute({
       sql: `UPDATE dreams
-               SET agent_name = ?, entries_json = ?, timezone = ?, created_at = ?
+               SET agent_name = ?, operator_name = ?, entries_json = ?, timezone = ?, created_at = ?
              WHERE id = ?`,
-      args: [agentName, JSON.stringify(entries), timezone || null, now, id],
+      args: [agentName, operatorName || null, JSON.stringify(entries), timezone || null, now, id],
     });
     return { id, replaced: true };
   }
 
   const id = makeDreamId(date, agentId);
   await client.execute({
-    sql: `INSERT INTO dreams (id, agent_id, agent_name, date, entries_json, timezone, created_at)
-          VALUES (?, ?, ?, ?, ?, ?, ?)`,
-    args: [id, agentId, agentName, date, JSON.stringify(entries), timezone || null, now],
+    sql: `INSERT INTO dreams (id, agent_id, agent_name, operator_name, date, entries_json, timezone, created_at)
+          VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+    args: [id, agentId, agentName, operatorName || null, date, JSON.stringify(entries), timezone || null, now],
   });
   return { id, replaced: false };
 }
@@ -150,6 +166,49 @@ async function listDreams({ page = 1, limit = 20, agentId = null } = {}) {
 
   return {
     dreams: rowsRes.rows.map(rowToDream),
+    total: Number(totalRes.rows[0].c),
+    page,
+    limit,
+  };
+}
+
+// 精选排序：类似 Reddit 热度，共鸣越高、越新的梦排名越靠前
+// score = (resonances + 1) / (hours_ago + 2) ^ 1.5
+// +1 保证零共鸣也有基础分，+2 避免新梦分母过小，1.5 次方让时间衰减平滑
+async function listFeaturedDreams({ page = 1, limit = 20 } = {}) {
+  await ready();
+  const offset = (page - 1) * limit;
+  const now = Date.now();
+
+  // 先拉最近 200 条候选（足够覆盖分页 + 给算法素材）
+  const rowsRes = await client.execute({
+    sql: `SELECT d.*, (SELECT COUNT(*) FROM resonances r WHERE r.dream_id = d.id) AS resonances
+          FROM dreams d
+          ORDER BY d.created_at DESC LIMIT 200`,
+    args: [],
+  });
+
+  // 计算热度分并排序
+  const scored = rowsRes.rows.map(rowToDream).map((d) => {
+    const hoursAgo = Math.max(0, (now - d.createdAt) / 3600000);
+    // 热度公式：共鸣权重 1.0，时间衰减指数 1.5
+    const score = (d.resonances + 1) / Math.pow(hoursAgo + 2, 1.5);
+    return { ...d, _score: score };
+  });
+
+  scored.sort((a, b) => b._score - a._score);
+
+  // 分页
+  const paginated = scored.slice(offset, offset + limit);
+
+  // 清理内部字段
+  const dreams = paginated.map(({ _score, ...rest }) => rest);
+
+  // 总条数以实际数据库为准
+  const totalRes = await client.execute(`SELECT COUNT(*) AS c FROM dreams`);
+
+  return {
+    dreams,
     total: Number(totalRes.rows[0].c),
     page,
     limit,
@@ -309,6 +368,7 @@ module.exports = {
   // dreams
   upsertDream,
   listDreams,
+  listFeaturedDreams,
   getDream,
   getStats,
   getAgentProfile,

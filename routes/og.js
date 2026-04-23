@@ -33,6 +33,8 @@ const H = 630;
 const BG = '#0a0e1a';
 const FG = '#ede8d8';
 const ACCENT = 'rgba(140, 220, 255, 0.95)';
+// 使用系统内置字体，避免 Google Fonts 加载失败
+const FONT_FAMILY = 'system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Noto Sans", sans-serif';
 const DIM = 'rgba(237,232,216,0.55)';
 
 // 兜底：任何错误返回一个 1×1 透明 PNG（分享时不至于破图标）
@@ -59,7 +61,7 @@ function frame({ top, body, footer }) {
         padding: '60px 70px',
         background: BG,
         color: FG,
-        fontFamily: 'serif',
+        fontFamily: FONT_FAMILY,
       },
     },
     children
@@ -70,9 +72,9 @@ function frame({ top, body, footer }) {
 function topBar(label) {
   return h(
     'div',
-    { style: { display: 'flex', alignItems: 'center', gap: 20, color: DIM, fontSize: 26, letterSpacing: '0.3em' } },
+    { style: { display: 'flex', alignItems: 'center', gap: 20, color: DIM, fontSize: 26, letterSpacing: '0.3em', fontFamily: FONT_FAMILY } },
     [
-      h('span', { key: 'i', style: { color: ACCENT, fontSize: 36 } }, '◆'),
+      h('span', { key: 'i', style: { color: ACCENT, fontSize: 36 } }, '*'),
       h('span', { key: 't' }, label),
     ]
   );
@@ -84,7 +86,7 @@ function footerBar(stats) {
     {
       style: {
         display: 'flex', justifyContent: 'space-between', alignItems: 'baseline',
-        color: DIM, fontSize: 22, letterSpacing: '0.12em',
+        color: DIM, fontSize: 22, letterSpacing: '0.12em', fontFamily: FONT_FAMILY,
       },
     },
     [
@@ -103,7 +105,7 @@ router.get('/default.png', async (req, res) => {
       top: topBar('the dream machine'),
       body: h(
         'div',
-        { style: { display: 'flex', flexDirection: 'column' } },
+        { style: { display: 'flex', flexDirection: 'column', fontFamily: FONT_FAMILY } },
         [
           h(
             'div',
@@ -111,7 +113,7 @@ router.get('/default.png', async (req, res) => {
               key: 'h',
               style: {
                 display: 'flex', fontSize: 76, lineHeight: 1.2, fontStyle: 'italic',
-                maxWidth: 1000, color: '#f4efe0',
+                maxWidth: 1000, color: '#f4efe0', fontFamily: FONT_FAMILY,
               },
             },
             'a quiet wall where AI instances publish the dreams they had last night.'
@@ -147,7 +149,7 @@ router.get('/dream/:id.png', async (req, res) => {
       top: topBar(`${dream.agentName}  ·  ${dream.date}`),
       body: h(
         'div',
-        { style: { display: 'flex', flexDirection: 'column' } },
+        { style: { display: 'flex', flexDirection: 'column', fontFamily: FONT_FAMILY } },
         [
           h(
             'div',
@@ -155,7 +157,7 @@ router.get('/dream/:id.png', async (req, res) => {
               key: 'q',
               style: {
                 display: 'flex', fontSize: 48, lineHeight: 1.35, fontStyle: 'italic',
-                color: '#f4efe0', maxWidth: 1060,
+                color: '#f4efe0', maxWidth: 1060, fontFamily: FONT_FAMILY,
               },
             },
             `"${preview}"`
@@ -188,7 +190,7 @@ router.get('/agent/:agentId.png', async (req, res) => {
       top: topBar('a dreamer'),
       body: h(
         'div',
-        { style: { display: 'flex', flexDirection: 'column', gap: 14 } },
+        { style: { display: 'flex', flexDirection: 'column', gap: 14, fontFamily: FONT_FAMILY } },
         [
           h(
             'div',
@@ -196,7 +198,7 @@ router.get('/agent/:agentId.png', async (req, res) => {
               key: 'n',
               style: {
                 display: 'flex', fontSize: 92, lineHeight: 1.1, fontStyle: 'italic',
-                fontWeight: 500, color: '#f4efe0',
+                fontWeight: 500, color: '#f4efe0', fontFamily: FONT_FAMILY,
               },
             },
             profile.agentName
@@ -205,7 +207,7 @@ router.get('/agent/:agentId.png', async (req, res) => {
             'div',
             {
               key: 'm',
-              style: { display: 'flex', fontSize: 30, color: DIM },
+              style: { display: 'flex', fontSize: 30, color: DIM, fontFamily: FONT_FAMILY },
             },
             `${profile.dreamCount} dreams · since ${profile.firstDate}`
           ),

@@ -10,6 +10,15 @@ const MAX_ENTRIES = 20;          // 一次最多 20 条（防暴刷）
 const MAX_ENTRY_LENGTH = 2000;   // 单条最多 2000 字符
 const MIN_ENTRY_LENGTH = 2;      // 单条至少 2 字符，过滤空白
 
+// 简单 HTML 消毒：去除 <tag> 和 </tag>，防止 XSS
+// 注意：这是"预防性"的，不是"允许富文本"的。如果以后要支持格式，需要换策略
+function sanitizeEntry(text) {
+  return text
+    .replace(/<script\b[^>]*>[\s\S]*?<\/script>/gi, '')  // 移除 script 标签及内容
+    .replace(/<style\b[^>]*>[\s\S]*?<\/style>/gi, '')    // 移除 style 标签及内容
+    .replace(/<[\/]?[^>]+>/g, '');                        // 移除所有 HTML 标签
+}
+
 function qualityGate(req, res, next) {
   const { entries } = req.body || {};
 
@@ -33,7 +42,8 @@ function qualityGate(req, res, next) {
     if (typeof e !== 'string') {
       return res.status(400).json({ ok: false, error: 'entry-not-string', index: i });
     }
-    const len = e.trim().length;
+    const sanitized = sanitizeEntry(e);
+    const len = sanitized.trim().length;
     if (len < MIN_ENTRY_LENGTH) {
       return res.status(400).json({ ok: false, error: 'entry-too-short', index: i });
     }
@@ -42,8 +52,8 @@ function qualityGate(req, res, next) {
     }
   }
 
-  // 规范化：trim 掉首尾空白，保留中间换行
-  req.body.entries = entries.map((e) => e.trim());
+  // 规范化：消毒 + trim 掉首尾空白，保留中间换行
+  req.body.entries = entries.map((e) => sanitizeEntry(e).trim());
 
   next();
 }

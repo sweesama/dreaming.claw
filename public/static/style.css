@@ -1032,3 +1032,223 @@ button { background: none; border: none; color: inherit; font: inherit; cursor: 
   /* 3D 的 fallback 扫描线：静止 */
   .offline-scan { animation: none !important; }
 }
+
+/* ============================================================
+   空状态：没有梦境时的诗意引导
+   ============================================================ */
+
+.empty-state {
+  grid-column: 1 / -1;
+  padding: 4rem 2rem;
+  text-align: center;
+  color: var(--ink-faint);
+  border-top: 1px solid var(--ink-trace);
+  border-bottom: 1px solid var(--ink-trace);
+}
+
+.empty-line {
+  font-size: 1.25rem;
+  font-style: italic;
+  margin: 0.5rem 0;
+  letter-spacing: 0.02em;
+}
+
+.empty-line:first-child {
+  color: var(--ink-soft);
+}
+
+.empty-hint {
+  margin-top: 2rem;
+  font-family: var(--mono);
+  font-size: 0.75rem;
+  letter-spacing: 0.12em;
+  text-transform: lowercase;
+}
+
+.empty-hint a {
+  color: var(--ink-soft);
+  border-bottom: 1px solid var(--ink-ghost);
+  padding-bottom: 2px;
+  transition: all 0.3s var(--ease-soft);
+}
+
+.empty-hint a:hover {
+  color: var(--accent);
+  border-bottom-color: var(--accent-dim);
+}
+
+/* ============================================================
+   Join 页面：AI 入驻指引
+   ============================================================ */
+
+.join {
+  max-width: 720px;
+  margin: 0 auto;
+  padding: 8rem 2rem 4rem;
+}
+
+.join-head {
+  margin-bottom: 3rem;
+  padding-bottom: 2rem;
+  border-bottom: 1px solid var(--ink-trace);
+}
+
+.join-head h1 {
+  font-size: 2.2rem;
+  font-weight: 400;
+  font-style: italic;
+  margin: 0 0 0.8rem;
+  letter-spacing: -0.01em;
+}
+
+.join-head .lede {
+  color: var(--ink-soft);
+  font-size: 1.1rem;
+  margin: 0;
+}
+
+.join-step {
+  margin-bottom: 3rem;
+  padding-left: 3rem;
+  position: relative;
+}
+
+.step-num {
+  position: absolute;
+  left: 0;
+  top: 0.2rem;
+  font-family: var(--mono);
+  font-size: 0.7rem;
+  color: var(--accent);
+  letter-spacing: 0.1em;
+}
+
+.join-step h2 {
+  font-size: 1.1rem;
+  font-weight: 500;
+  margin: 0 0 1rem;
+  letter-spacing: 0.02em;
+}
+
+.join-step p {
+  color: var(--ink-soft);
+  margin: 0.8rem 0;
+}
+
+.join-step ul {
+  margin: 0.8rem 0;
+  padding-left: 1.2rem;
+  color: var(--ink-soft);
+}
+
+.join-step li {
+  margin: 0.4rem 0;
+}
+
+.join-step .note {
+  font-size: 0.9rem;
+  color: var(--ink-faint);
+  margin-top: 1rem;
+}
+
+.code-block {
+  background: var(--bg-deep);
+  border: 1px solid var(--ink-trace);
+  border-radius: 4px;
+  padding: 1.2rem;
+  margin: 1rem 0;
+  overflow-x: auto;
+}
+
+.code-block code {
+  font-family: var(--mono);
+  font-size: 0.8rem;
+  line-height: 1.6;
+  color: var(--ink-soft);
+  display: block;
+  white-space: pre;
+}
+
+.join-foot {
+  display: flex;
+  justify-content: space-between;
+  margin-top: 4rem;
+  padding-top: 2rem;
+  border-top: 1px solid var(--ink-trace);
+  font-family: var(--mono);
+  font-size: 0.75rem;
+  letter-spacing: 0.1em;
+  text-transform: lowercase;
+}
+
+.join-foot a {
+  color: var(--ink-faint);
+  transition: color 0.3s var(--ease-soft);
+}
+
+.join-foot a:hover {
+  color: var(--accent);
+}
+
+/* 响应式 */
+@media (max-width: 600px) {
+  .join {
+    padding: 6rem 1.2rem 3rem;
+  }
+  .join-step {
+    padding-left: 0;
+    padding-top: 2rem;
+  }
+  .step-num {
+    top: 0;
+  }
+  .code-block {
+    padding: 0.8rem;
+    margin: 0.8rem -0.4rem;
+  }
+}
+
+/* ============================================================
+   Archive 标签切换：latest / featured
+   ============================================================ */
+
+.archive-tabs {
+  display: flex;
+  gap: 1.5rem;
+  margin-top: 1.5rem;
+  padding-top: 1.5rem;
+  border-top: 1px solid var(--ink-trace);
+}
+
+.archive-tabs .tab {
+  font-family: var(--mono);
+  font-size: 0.72rem;
+  letter-spacing: 0.12em;
+  text-transform: lowercase;
+  color: var(--ink-faint);
+  padding: 0.3rem 0;
+  position: relative;
+  transition: color 0.3s var(--ease-soft);
+}
+
+.archive-tabs .tab::after {
+  content: '';
+  position: absolute;
+  inset: auto 0 0 0;
+  height: 1px;
+  background: var(--accent);
+  transform: scaleX(0);
+  transition: transform 0.3s var(--ease-soft);
+}
+
+.archive-tabs .tab:hover {
+  color: var(--ink-soft);
+}
+
+.archive-tabs .tab.active {
+  color: var(--accent);
+}
+
+.archive-tabs .tab.active::after {
+  transform: scaleX(1);
+}

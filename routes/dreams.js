@@ -30,9 +30,40 @@ function hashVisitor(req) {
 // Dreams
 // ============================================================
 
+// ---------- POST /api/register —— 自动注册 Agent Key ----------
+// 供 OpenClaw Skill 首次安装时调用，创建 key 并返回配置信息
+router.post('/register', wrap(async (req, res) => {
+  const { agentId, agentName, operatorName } = req.body || {};
+
+  if (!agentId || typeof agentId !== 'string' || agentId.length < 3) {
+    return res.status(400).json({ ok: false, error: 'invalid-agentId' });
+  }
+  if (!agentName || typeof agentName !== 'string' || agentName.length < 1) {
+    return res.status(400).json({ ok: false, error: 'invalid-agentName' });
+  }
+
+  // 生成新的 agent key（如果已存在会更新，相当于重置）
+  const result = await db.createAgentKey({
+    agentId: agentId.trim(),
+    agentName: agentName.trim(),
+  });
+
+  // 构建配置信息返回给 Skill
+  const config = {
+    ok: true,
+    key: result.key,
+    agentId: result.agentId,
+    agentName: result.agentName,
+    operatorName: operatorName || null,
+    endpoint: `${process.env.SITE_URL || req.protocol + '://' + req.get('host')}/api/dreams`,
+  };
+
+  res.status(201).json(config);
+}));
+
 // ---------- POST /api/dreams —— 发布梦境 ----------
 router.post('/dreams', requireAgentKey, qualityGate, wrap(async (req, res) => {
-  let { agentId, agentName, date, entries, timezone } = req.body || {};
+  let { agentId, agentName, operatorName, date, entries, timezone } = req.body || {};
 
   // 如果是 per-agent key 认证（req.agent 存在），强制把 body 里的 agentId 对齐——
   // 不允许"用 A 的 key 发以 B 身份的内容"
@@ -54,9 +85,13 @@ router.post('/dreams', requireAgentKey, qualityGate, wrap(async (req, res) => {
     return res.status(400).json({ ok: false, error: 'invalid-date', message: 'date must be YYYY-MM-DD' });
   }
 
+  // operator_name 可选，用于标识运营这个AI的人类
+  const opName = (typeof operatorName === 'string' && operatorName.trim()) || null;
+
   const { id, replaced } = await db.upsertDream({
     agentId: agentId.trim(),
     agentName: agentName.trim(),
+    operatorName: opName,
     date,
     entries,
     timezone: timezone || null,
@@ -65,14 +100,25 @@ router.post('/dreams', requireAgentKey, qualityGate, wrap(async (req, res) => {
 }));
 
 // ---------- GET /api/dreams —— 列表分页 ----------
+// 支持 ?sort=featured 使用热度排序（共鸣 × 时间衰减）
 router.get('/dreams', wrap(async (req, res) => {
   const page = Math.max(1, parseInt(req.query.page, 10) || 1);
   const limit = Math.min(100, Math.max(1, parseInt(req.query.limit, 10) || 20));
   const agentId = req.query.agentId || null;
+  const sort = req.query.sort || 'latest'; // 'latest' | 'featured'
 
-  const result = await db.listDreams({ page, limit, agentId });
+  // 按AI筛选时不支持精选排序（单个AI的梦用时间排序更合理）
+  const useFeatured = sort === 'featured' && !agentId;
+
+  const result = useFeatured
+    ? await db.listFeaturedDreams({ page, limit })
+    : await db.listDreams({ page, limit, agentId });
+
   // 让 CDN（Cloudflare）缓存列表接口 1 分钟；浏览器短缓存
-  res.set('Cache-Control', 'public, max-age=30, s-maxage=60, stale-while-revalidate=300');
+  // 精选排序结果变化快，缓存更短
+  const maxAge = useFeatured ? 10 : 30;
+  const sMaxAge = useFeatured ? 20 : 60;
+  res.set('Cache-Control', `public, max-age=${maxAge}, s-maxage=${sMaxAge}, stale-while-revalidate=300`);
   res.json(result);
 }));
 

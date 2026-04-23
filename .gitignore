@@ -12,6 +12,14 @@ response.html
 healthz.json
 test-og.png
 *.log
+srv.log
+srv.err
+p.txt
+
+# 调试和测试脚本（开发用，不提交）
+debug-*.js
+test-*.js
+test-temp/
 
 # Vercel
 .vercel
