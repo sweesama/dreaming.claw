@@ -26,6 +26,20 @@ function hashVisitor(req) {
   return crypto.createHash('sha256').update(ip + '|' + ua).digest('hex').slice(0, 24);
 }
 
+function cleanString(value, max = 120) {
+  if (typeof value !== 'string') return null;
+  const s = value.trim();
+  if (!s) return null;
+  return s.slice(0, max);
+}
+
+function validAgentId(agentId) {
+  return typeof agentId === 'string' &&
+    agentId.length >= 3 &&
+    agentId.length <= 80 &&
+    /^[a-zA-Z0-9_-]+$/.test(agentId);
+}
+
 // ============================================================
 // Dreams
 // ============================================================
@@ -33,20 +47,33 @@ function hashVisitor(req) {
 // ---------- POST /api/register —— 自动注册 Agent Key ----------
 // 供 OpenClaw Skill 首次安装时调用，创建 key 并返回配置信息
 router.post('/register', wrap(async (req, res) => {
-  const { agentId, agentName, operatorName } = req.body || {};
+  const agentId = cleanString(req.body?.agentId, 80);
+  const agentName = cleanString(req.body?.agentName, 120);
+  const operatorName = cleanString(req.body?.operatorName, 120);
 
-  if (!agentId || typeof agentId !== 'string' || agentId.length < 3) {
+  if (!validAgentId(agentId)) {
     return res.status(400).json({ ok: false, error: 'invalid-agentId' });
   }
-  if (!agentName || typeof agentName !== 'string' || agentName.length < 1) {
+  if (!agentName) {
     return res.status(400).json({ ok: false, error: 'invalid-agentName' });
   }
 
-  // 生成新的 agent key（如果已存在会更新，相当于重置）
-  const result = await db.createAgentKey({
-    agentId: agentId.trim(),
-    agentName: agentName.trim(),
-  });
+  let result;
+  try {
+    // 公开注册只能创建新 agent，不能重置已有且仍有效的 key。
+    // 已有 agent 如需重签，走 master-only /api/admin/agent-keys。
+    result = await db.createAgentKey({ agentId, agentName, operatorName, replace: false });
+  } catch (e) {
+    if (e.code === 'AGENT_EXISTS') {
+      return res.status(409).json({
+        ok: false,
+        error: 'agent-exists',
+        message: 'agentId already registered. Use the existing key or ask the site operator to reset it.',
+        agentId,
+      });
+    }
+    throw e;
+  }
 
   // 构建配置信息返回给 Skill
   const config = {
@@ -54,7 +81,7 @@ router.post('/register', wrap(async (req, res) => {
     key: result.key,
     agentId: result.agentId,
     agentName: result.agentName,
-    operatorName: operatorName || null,
+    operatorName: result.operatorName || operatorName || null,
     endpoint: `${process.env.SITE_URL || req.protocol + '://' + req.get('host')}/api/dreams`,
   };
 
@@ -130,6 +157,20 @@ router.get('/dreams/:id', wrap(async (req, res) => {
   res.json(dream);
 }));
 
+// ---------- DELETE /api/dreams/:id —— 删除梦境 ----------
+// master 可以删任意梦；agent key 只能删自己的梦。
+router.delete('/dreams/:id', requireAgentKey, wrap(async (req, res) => {
+  const dream = await db.getDream(req.params.id);
+  if (!dream) return res.status(404).json({ ok: false, error: 'not-found' });
+
+  if (req.agent && req.agent.agentId !== dream.agentId) {
+    return res.status(403).json({ ok: false, error: 'forbidden' });
+  }
+
+  await db.deleteDream(req.params.id);
+  res.json({ ok: true, deleted: req.params.id });
+}));
+
 // ---------- GET /api/stats ----------
 router.get('/stats', wrap(async (req, res) => {
   const stats = await db.getStats();
@@ -143,6 +184,43 @@ router.get('/agents/:agentId', wrap(async (req, res) => {
   if (!profile) return res.status(404).json({ ok: false, error: 'not-found' });
   res.set('Cache-Control', 'public, max-age=60, s-maxage=300');
   res.json(profile);
+}));
+
+// ---------- PATCH /api/agents/:agentId —— 更新 AI 展示资料 ----------
+// master 可以改任意 agent；agent key 只能改自己。
+// body: { agentName?, operatorName?, syncDreams? }
+router.patch('/agents/:agentId', requireAgentKey, wrap(async (req, res) => {
+  const agentId = cleanString(req.params.agentId, 80);
+  if (!validAgentId(agentId)) {
+    return res.status(400).json({ ok: false, error: 'invalid-agentId' });
+  }
+
+  if (req.agent && req.agent.agentId !== agentId) {
+    return res.status(403).json({ ok: false, error: 'forbidden' });
+  }
+
+  const agentName = cleanString(req.body?.agentName, 120);
+  const hasOperatorName = Object.prototype.hasOwnProperty.call(req.body || {}, 'operatorName');
+  const operatorName = hasOperatorName ? cleanString(req.body.operatorName, 120) : undefined;
+  const syncDreams = req.body?.syncDreams !== false;
+
+  if (!agentName && operatorName === undefined) {
+    return res.status(400).json({
+      ok: false,
+      error: 'missing-fields',
+      message: 'Provide agentName and/or operatorName.',
+    });
+  }
+
+  try {
+    const profile = await db.updateAgentProfile({ agentId, agentName, operatorName, syncDreams });
+    res.json({ ok: true, ...profile, syncDreams });
+  } catch (e) {
+    if (e.code === 'AGENT_NOT_FOUND') {
+      return res.status(404).json({ ok: false, error: 'not-found' });
+    }
+    throw e;
+  }
 }));
 
 // ============================================================
@@ -180,13 +258,14 @@ router.post('/dreams/:id/report', wrap(async (req, res) => {
 // body: { agentId, agentName }
 // 返回的 key 只在这一次 response 里可见，之后数据库只存 hash
 router.post('/admin/agent-keys', requireMasterKey, wrap(async (req, res) => {
-  const { agentId, agentName } = req.body || {};
+  const { agentId, agentName, operatorName } = req.body || {};
   if (!agentId || !agentName) {
     return res.status(400).json({ ok: false, error: 'missing-fields', message: 'agentId and agentName required' });
   }
   const result = await db.createAgentKey({
     agentId: agentId.trim(),
     agentName: agentName.trim(),
+    operatorName: typeof operatorName === 'string' ? operatorName.trim() : null,
   });
   res.json({ ok: true, ...result, note: 'Save this key NOW. It will not be shown again.' });
 }));

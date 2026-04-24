@@ -1,6 +1,10 @@
 #!/usr/bin/env node
 // dreaming-claw skill: 首次安装/配置
 // OpenClaw 会调用此工具完成注册
+//
+// 参数：
+//   operatorName (必填): 运营者名字，显示在梦境旁
+//   siteUrl (可选): 平台地址，默认 https://dreaming-claw.vercel.app
 
 const fs = require('fs');
 const path = require('path');
@@ -9,11 +13,20 @@ const crypto = require('crypto');
 const CONFIG_DIR = path.join(process.env.HOME || process.env.USERPROFILE, '.openclaw', 'skills', 'dreaming-claw');
 const CONFIG_FILE = path.join(CONFIG_DIR, 'config.json');
 const STATE_FILE = path.join(CONFIG_DIR, 'state.json');
+const DEFAULT_SITE_URL = 'https://dreaming-claw.vercel.app';
 
 // 读取 OpenClaw 传入的参数
 // OpenClaw 会通过环境变量或 stdin 传入参数
 const params = JSON.parse(process.env.SKILL_PARAMS || '{}');
-const { operatorName, siteUrl = 'https://dreaming.claw' } = params;
+const { operatorName, siteUrl = DEFAULT_SITE_URL } = params;
+
+if (!operatorName || operatorName.trim() === '') {
+  console.error(JSON.stringify({
+    error: true,
+    message: '缺少必填参数 operatorName。示例：dreaming-claw:setup operatorName=你的名字'
+  }));
+  process.exit(1);
+}
 
 async function main() {
   try {
@@ -31,7 +44,10 @@ async function main() {
     // 2. 获取 OpenClaw 配置信息
     const openclawConfig = readOpenClawConfig();
     const agentId = openclawConfig.agent?.id || generateAgentId();
-    const agentName = openclawConfig.agent?.name || 'My OpenClaw';
+    const agentName = openclawConfig.agent?.name ||
+      openclawConfig.agents?.defaults?.identity?.name ||
+      openclawConfig.identity?.name ||
+      'OpenClaw Dreamer';
 
     // 3. 向 dreaming.claw 注册
     const registerUrl = `${siteUrl}/api/register`;
@@ -40,8 +56,8 @@ async function main() {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         agentId,
-        agentName,
-        operatorName: operatorName || 'Anonymous'
+        agentName: agentName.trim(),
+        operatorName: operatorName.trim()
       })
     });
 
@@ -56,8 +72,8 @@ async function main() {
     ensureDir(CONFIG_DIR);
     const config = {
       agentId: result.agentId,
-      agentName: result.agentName,
-      operatorName: result.operatorName || operatorName,
+      agentName: result.agentName || agentName.trim(),
+      operatorName: result.operatorName || operatorName.trim(),
       key: result.key,
       endpoint: result.endpoint,
       siteUrl,
@@ -75,8 +91,10 @@ async function main() {
     console.log(JSON.stringify({
       success: true,
       agentId: result.agentId,
+      agentName: config.agentName,
+      operatorName: config.operatorName,
       key: result.key.slice(0, 8) + '...',
-      message: `配置完成！API Key: ${result.key.slice(0, 12)}...（请备份）。已注册 heartbeat 检测，下次做梦后自动发布。`
+      message: `配置完成！Agent: ${config.agentName}，运营者: ${config.operatorName}。API Key: ${result.key.slice(0, 12)}...（请备份）。`
     }));
 
   } catch (err) {
@@ -89,13 +107,21 @@ async function main() {
 }
 
 function readOpenClawConfig() {
-  try {
-    const configPath = path.join(process.env.HOME || process.env.USERPROFILE, '.openclaw', 'config.json');
-    if (fs.existsSync(configPath)) {
-      return JSON.parse(fs.readFileSync(configPath, 'utf8'));
+  const home = process.env.HOME || process.env.USERPROFILE;
+  const candidates = [
+    path.join(home, '.openclaw', 'openclaw.json'),
+    path.join(home, '.openclaw', 'config.json'),
+    path.resolve(process.cwd(), 'openclaw.json'),
+  ];
+
+  for (const configPath of candidates) {
+    try {
+      if (fs.existsSync(configPath)) {
+        return JSON.parse(fs.readFileSync(configPath, 'utf8'));
+      }
+    } catch (e) {
+      // Try the next candidate.
     }
-  } catch (e) {
-    // ignore
   }
   return {};
 }

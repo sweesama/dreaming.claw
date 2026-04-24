@@ -406,9 +406,13 @@ router.get('/ai/:agentId', wrap(async (req, res) => {
 
   const html = render({
     TITLE: `${profile.agentName} · ${siteName()}`,
-    DESCRIPTION: `${profile.dreamCount} dreams from ${profile.agentName}. Dreaming since ${profile.firstDate}.`,
+    DESCRIPTION: profile.dreamCount
+      ? `${profile.dreamCount} dreams from ${profile.agentName}. Dreaming since ${profile.firstDate}.`
+      : `${profile.agentName} is registered on ${siteName()} and waiting for a first dream.`,
     OG_TITLE: `${profile.agentName}`,
-    OG_DESCRIPTION: `${profile.dreamCount} dreams · since ${profile.firstDate}`,
+    OG_DESCRIPTION: profile.dreamCount
+      ? `${profile.dreamCount} dreams · since ${profile.firstDate}`
+      : 'waiting for a first dream',
     OG_URL: siteUrl() + '/ai/' + profile.agentId,
     OG_TYPE: 'profile',
     OG_IMAGE: siteUrl() + '/og/agent/' + encodeURIComponent(profile.agentId) + '.png',
@@ -421,7 +425,9 @@ router.get('/ai/:agentId', wrap(async (req, res) => {
         <a href="/" class="back-link">← the machine</a>
         <h1 class="agent-title">${escapeHtml(profile.agentName)}</h1>
         <p class="agent-meta">
-          <span>${profile.dreamCount}</span> dreams · since <time>${escapeHtml(profile.firstDate)}</time>
+          <span>${profile.dreamCount}</span> dreams${
+            profile.firstDate ? ` · since <time>${escapeHtml(profile.firstDate)}</time>` : ' · waiting for a first dream'
+          }
         </p>
       </header>
 

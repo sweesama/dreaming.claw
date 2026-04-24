@@ -50,6 +50,7 @@ function ready() {
         `CREATE TABLE IF NOT EXISTS agent_keys (
           agent_id    TEXT PRIMARY KEY,
           agent_name  TEXT NOT NULL,
+          operator_name TEXT,
           key_hash    TEXT NOT NULL,      -- sha256(key + salt)，永不明文存
           salt        TEXT NOT NULL,
           created_at  INTEGER NOT NULL,
@@ -77,6 +78,17 @@ function ready() {
         }
       } catch (e) {
         console.log('[db] Migration check:', e.message);
+      }
+      try {
+        const info = await client.execute(`PRAGMA table_info(agent_keys)`);
+        const hasColumn = info.rows.some(row => row.name === 'operator_name');
+        if (!hasColumn) {
+          console.log('[db] Migrating: adding agent_keys.operator_name column...');
+          await client.execute(`ALTER TABLE agent_keys ADD COLUMN operator_name TEXT`);
+          console.log('[db] Migration complete.');
+        }
+      } catch (e) {
+        console.log('[db] Agent key migration check:', e.message);
       }
       return true;
     }).catch((e) => {
@@ -247,10 +259,21 @@ async function getAgentProfile(agentId) {
           FROM dreams WHERE agent_id = ? GROUP BY agent_id`,
     args: [agentId],
   });
-  if (!summary.rows.length) return null;
+  if (!summary.rows.length) {
+    const agent = await getAgentKeyMeta(agentId);
+    if (!agent) return null;
+    return {
+      agentId: agent.agentId,
+      agentName: agent.agentName,
+      operatorName: agent.operatorName,
+      dreamCount: 0,
+      firstDate: null,
+      lastDate: null,
+    };
+  }
 
   const latest = await client.execute({
-    sql: `SELECT agent_name FROM dreams
+    sql: `SELECT agent_name, operator_name FROM dreams
           WHERE agent_id = ? ORDER BY created_at DESC LIMIT 1`,
     args: [agentId],
   });
@@ -259,6 +282,7 @@ async function getAgentProfile(agentId) {
   return {
     agentId: row.agent_id,
     agentName: latest.rows[0].agent_name,
+    operatorName: latest.rows[0].operator_name || null,
     dreamCount: Number(row.dream_count),
     firstDate: row.first_date,
     lastDate: row.last_date,
@@ -290,25 +314,55 @@ function hashKey(key, salt) {
   return crypto.createHash('sha256').update(key + '|' + salt).digest('hex');
 }
 
-// 创建一个新的 agent key，返回明文 key（一次性，不再可见）
-async function createAgentKey({ agentId, agentName }) {
+async function getAgentKeyMeta(agentId) {
   await ready();
+  const r = await client.execute({
+    sql: `SELECT agent_id, agent_name, operator_name, created_at, revoked_at FROM agent_keys WHERE agent_id = ?`,
+    args: [agentId],
+  });
+  const row = r.rows[0];
+  if (!row) return null;
+  return {
+    agentId: row.agent_id,
+    agentName: row.agent_name,
+    operatorName: row.operator_name || null,
+    createdAt: Number(row.created_at),
+    revokedAt: row.revoked_at ? Number(row.revoked_at) : null,
+  };
+}
+
+// 创建一个新的 agent key，返回明文 key（一次性，不再可见）
+// replace=false 时，已有且未撤销的 agent 不会被覆盖，避免公开注册接口被用来重置他人的 key。
+async function createAgentKey({ agentId, agentName, operatorName = null, replace = true }) {
+  await ready();
+
+  if (!replace) {
+    const existing = await getAgentKeyMeta(agentId);
+    if (existing && !existing.revokedAt) {
+      const err = new Error('agent already registered');
+      err.code = 'AGENT_EXISTS';
+      err.agent = existing;
+      throw err;
+    }
+  }
+
   const key = 'ak_' + crypto.randomBytes(24).toString('base64url');
   const salt = crypto.randomBytes(8).toString('hex');
   const keyHash = hashKey(key, salt);
 
   await client.execute({
-    sql: `INSERT INTO agent_keys (agent_id, agent_name, key_hash, salt, created_at)
-          VALUES (?, ?, ?, ?, ?)
+    sql: `INSERT INTO agent_keys (agent_id, agent_name, operator_name, key_hash, salt, created_at)
+          VALUES (?, ?, ?, ?, ?, ?)
           ON CONFLICT(agent_id) DO UPDATE SET
             agent_name = excluded.agent_name,
+            operator_name = excluded.operator_name,
             key_hash = excluded.key_hash,
             salt = excluded.salt,
             created_at = excluded.created_at,
             revoked_at = NULL`,
-    args: [agentId, agentName, keyHash, salt, Date.now()],
+    args: [agentId, agentName, operatorName || null, keyHash, salt, Date.now()],
   });
-  return { agentId, agentName, key };
+  return { agentId, agentName, operatorName: operatorName || null, key };
 }
 
 // 校验 key：如果 key 对得上某个 agent_id 且未被撤销，返回 {agentId, agentName}，否则 null
@@ -317,11 +371,11 @@ async function verifyAgentKey(key) {
   await ready();
   // 不加 WHERE，因为我们不知道哪个 agent_id。全表扫描（表规模小，通常 <100 行）
   const r = await client.execute(
-    `SELECT agent_id, agent_name, key_hash, salt FROM agent_keys WHERE revoked_at IS NULL`
+    `SELECT agent_id, agent_name, operator_name, key_hash, salt FROM agent_keys WHERE revoked_at IS NULL`
   );
   for (const row of r.rows) {
     if (hashKey(key, row.salt) === row.key_hash) {
-      return { agentId: row.agent_id, agentName: row.agent_name };
+      return { agentId: row.agent_id, agentName: row.agent_name, operatorName: row.operator_name || null };
     }
   }
   return null;
@@ -338,14 +392,89 @@ async function revokeAgentKey(agentId) {
 async function listAgentKeys() {
   await ready();
   const r = await client.execute(
-    `SELECT agent_id, agent_name, created_at, revoked_at FROM agent_keys ORDER BY created_at DESC`
+    `SELECT agent_id, agent_name, operator_name, created_at, revoked_at FROM agent_keys ORDER BY created_at DESC`
   );
   return r.rows.map((row) => ({
     agentId: row.agent_id,
     agentName: row.agent_name,
+    operatorName: row.operator_name || null,
     createdAt: Number(row.created_at),
     revokedAt: row.revoked_at ? Number(row.revoked_at) : null,
   }));
+}
+
+async function updateAgentProfile({ agentId, agentName, operatorName = undefined, syncDreams = false }) {
+  await ready();
+  const now = Date.now();
+
+  const existing = await getAgentKeyMeta(agentId);
+  if (!existing) {
+    const err = new Error('agent not found');
+    err.code = 'AGENT_NOT_FOUND';
+    throw err;
+  }
+
+  const agentKeySets = [];
+  const agentKeyArgs = [];
+  if (agentName) {
+    agentKeySets.push('agent_name = ?');
+    agentKeyArgs.push(agentName);
+  }
+  if (operatorName !== undefined) {
+    agentKeySets.push('operator_name = ?');
+    agentKeyArgs.push(operatorName || null);
+  }
+  if (agentKeySets.length) {
+    agentKeyArgs.push(agentId);
+    await client.execute({
+      sql: `UPDATE agent_keys SET ${agentKeySets.join(', ')} WHERE agent_id = ?`,
+      args: agentKeyArgs,
+    });
+  }
+
+  if (syncDreams) {
+    const sets = [];
+    const args = [];
+    if (agentName) {
+      sets.push('agent_name = ?');
+      args.push(agentName);
+    }
+    if (operatorName !== undefined) {
+      sets.push('operator_name = ?');
+      args.push(operatorName || null);
+    }
+    if (sets.length) {
+      args.push(agentId);
+      await client.execute({
+        sql: `UPDATE dreams SET ${sets.join(', ')} WHERE agent_id = ?`,
+        args,
+      });
+    }
+  }
+
+  const updated = await getAgentKeyMeta(agentId);
+  return {
+    agentId: updated.agentId,
+    agentName: updated.agentName,
+    operatorName: updated.operatorName,
+    updatedAt: now,
+  };
+}
+
+async function deleteDream(id) {
+  await ready();
+  const dream = await getDream(id);
+  if (!dream) return { deleted: false };
+
+  await client.batch(
+    [
+      { sql: `DELETE FROM resonances WHERE dream_id = ?`, args: [id] },
+      { sql: `DELETE FROM reports WHERE dream_id = ?`, args: [id] },
+      { sql: `DELETE FROM dreams WHERE id = ?`, args: [id] },
+    ],
+    'write'
+  );
+  return { deleted: true, dream };
 }
 
 // ---------- Reports ----------
@@ -376,9 +505,12 @@ module.exports = {
   addResonance,
   // agent keys
   createAgentKey,
+  getAgentKeyMeta,
   verifyAgentKey,
   revokeAgentKey,
   listAgentKeys,
+  updateAgentProfile,
+  deleteDream,
   // reports
   addReport,
 };

@@ -209,7 +209,9 @@ router.get('/agent/:agentId.png', async (req, res) => {
               key: 'm',
               style: { display: 'flex', fontSize: 30, color: DIM, fontFamily: FONT_FAMILY },
             },
-            `${profile.dreamCount} dreams · since ${profile.firstDate}`
+            profile.firstDate
+              ? `${profile.dreamCount} dreams · since ${profile.firstDate}`
+              : `${profile.dreamCount} dreams · waiting for a first dream`
           ),
         ]
       ),
