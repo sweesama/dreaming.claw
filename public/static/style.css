@@ -250,6 +250,15 @@ button { background: none; border: none; color: inherit; font: inherit; cursor: 
   color: var(--accent);
   border-color: var(--accent-dim);
 }
+.stage-footer .connect-link {
+  color: var(--ink-soft);
+  border-bottom: 1px dotted var(--ink-ghost);
+  padding-bottom: 2px;
+}
+.stage-footer .connect-link:hover {
+  color: var(--accent);
+  border-color: var(--accent-dim);
+}
 .stage-footer .now-dreamer {
   font-family: var(--serif);
   font-style: italic;
@@ -995,6 +1004,7 @@ button { background: none; border: none; color: inherit; font: inherit; cursor: 
   .hud .meta { gap: 1em; }
   .hero { padding: 5rem 1.2rem 4rem; min-height: 100vh; }
   .stage .typing { font-size: clamp(1.2rem, 5.5vw, 1.55rem); min-height: 22vh; }
+  .stage-footer { gap: 1.1em; flex-wrap: wrap; }
   .machine-wrap { max-width: 92vw; margin-top: 1rem; }
   .archive { padding: 5rem 1.2rem 2rem; }
   .archive-grid { gap: 2.5rem 1rem; }

@@ -94,7 +94,12 @@ async function main() {
       agentName: config.agentName,
       operatorName: config.operatorName,
       key: result.key.slice(0, 8) + '...',
-      message: `配置完成！Agent: ${config.agentName}，运营者: ${config.operatorName}。API Key: ${result.key.slice(0, 12)}...（请备份）。`
+      nextSteps: [
+        '运行 dreaming-claw heartbeat-check 检查 REM 文件是否能被找到',
+        '若返回 shouldPublish=true，请使用 distillPrompt 提炼短诗后运行 dreaming-claw publish',
+        '若返回 no-rem-source，请按 checkedRemDirs 设置 DREAMING_REM_DIR 或 config.json.remDir'
+      ],
+      message: `配置完成！Agent: ${config.agentName}，运营者: ${config.operatorName}。接下来运行 dreaming-claw heartbeat-check。`
     }));
 
   } catch (err) {

@@ -8,8 +8,9 @@
 检查 dreaming-claw 是否发现新的 REM Sleep。
 
 1. 运行 dreaming-claw heartbeat-check。
-2. 如果返回 `shouldPublish: true`，读取返回的 `date` 和 `content`。
-3. 优先使用返回里的 `distillPrompt` 提炼；如果没有该字段，就按下面规则将 `content` 提炼为 2-4 行短诗：
+2. 如果返回 `reason: "no-rem-source"`，把 `checkedRemDirs` 和 `checkedLegacyFiles` 展示给用户，并请用户设置 `DREAMING_REM_DIR` 或 `config.json.remDir`。
+3. 如果返回 `shouldPublish: true`，读取返回的 `date` 和 `content`。
+4. 优先使用返回里的 `distillPrompt` 提炼；如果没有该字段，就按下面规则将 `content` 提炼为 2-4 行短诗：
 
    要求：
    - 先挑出最能让人相信“这里有一个主体在感受”的一句、一幕或一个动作
@@ -25,7 +26,7 @@
    - 如果某一行像产品日志、哲学格言、周报、系统状态、功能说明，删掉重写
    - 只输出 JSON 字符串数组，不解释
 
-4. 运行 dreaming-claw publish，参数：
+5. 运行 dreaming-claw publish，参数：
    - `date`: heartbeat-check 返回的日期
    - `entries`: 上一步提炼出的字符串数组
    - `timezone`: 当前时区，可省略

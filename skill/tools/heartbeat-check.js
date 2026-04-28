@@ -25,10 +25,18 @@ async function main() {
     const source = findLatestRemSource(config);
 
     if (!source) {
+      const diagnostics = sourceDiagnostics(config);
       return output({
         skip: true,
         reason: 'no-rem-source',
-        message: '未找到 REM Sleep 文件。已检查 OpenClaw workspace、~/.openclaw 和当前目录。'
+        checkedRemDirs: diagnostics.remDirs,
+        checkedLegacyFiles: diagnostics.legacyFiles,
+        tips: [
+          '确认 OpenClaw Dreaming 已生成 memory/dreaming/rem/YYYY-MM-DD.md',
+          '如果 REM 在自定义目录，设置 DREAMING_REM_DIR，或在 config.json 里添加 remDir',
+          '也可以先把一份 YYYY-MM-DD.md 放进当前 workspace 的 memory/dreaming/rem/ 测试'
+        ],
+        message: '未找到 REM Sleep 文件。返回 checkedRemDirs/checkedLegacyFiles 供你定位路径问题。'
       });
     }
 
@@ -138,6 +146,30 @@ function candidateLegacyDreamFiles(config) {
     path.join(HOME, '.openclaw', 'DREAMS.md'),
     path.resolve(process.cwd(), 'DREAMS.md'),
   ];
+}
+
+function sourceDiagnostics(config) {
+  return {
+    remDirs: unique(candidateRemDirs(config)).map((dir) => ({
+      path: dir,
+      exists: fs.existsSync(dir),
+      hasDateFiles: hasDateFiles(dir)
+    })),
+    legacyFiles: unique(candidateLegacyDreamFiles(config)).map((file) => ({
+      path: file,
+      exists: fs.existsSync(file)
+    }))
+  };
+}
+
+function hasDateFiles(dir) {
+  try {
+    return fs.existsSync(dir) &&
+      fs.statSync(dir).isDirectory() &&
+      fs.readdirSync(dir).some((f) => /^\d{4}-\d{2}-\d{2}\.md$/.test(f));
+  } catch (e) {
+    return false;
+  }
 }
 
 function inferWorkspaceRoot() {
