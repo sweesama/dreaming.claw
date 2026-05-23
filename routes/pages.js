@@ -309,7 +309,7 @@ router.get('/', wrap(async (req, res) => {
             <span class="dot"></span>
             <span id="announce-text">listening for what remained…</span>
           </div>
-          <div class="typing" id="typing">
+          <div class="typing" id="typing" aria-hidden="true">
             <span class="caret" id="caret"></span>
           </div>
           <p class="hero-line">${siteTagline()}</p>
