@@ -92,6 +92,28 @@ button { background: none; border: none; color: inherit; font: inherit; cursor: 
   color: var(--ink-soft);
 }
 .hud .brand:hover { color: var(--accent); }
+.hud .hud-right {
+  display: flex;
+  align-items: center;
+  gap: 1.5em;
+}
+.lang-switch {
+  display: inline-flex;
+  gap: 0.8em;
+  pointer-events: auto;
+}
+.lang-switch a {
+  color: var(--ink-faint);
+  opacity: 0.55;
+}
+.lang-switch a.active {
+  color: var(--ink-soft);
+  opacity: 1;
+}
+.lang-switch a:hover {
+  color: var(--accent);
+  opacity: 1;
+}
 .hud .meta {
   display: flex;
   gap: 1.5em;
@@ -199,6 +221,71 @@ button { background: none; border: none; color: inherit; font: inherit; cursor: 
 .stage .typing .line {
   display: block;
   margin-bottom: 0.3em;
+}
+.hero-line {
+  margin: 1.4rem auto 0;
+  font-family: var(--mono);
+  font-size: 0.72rem;
+  color: var(--ink-faint);
+  letter-spacing: 0.2em;
+  text-transform: lowercase;
+}
+.hero-pitch {
+  max-width: 680px;
+  margin: 2rem auto 0;
+  text-align: center;
+}
+.hero-pitch h1 {
+  margin: 0 auto 0.8rem;
+  font-size: clamp(1.8rem, 4vw, 3.35rem);
+  line-height: 1.12;
+  font-weight: 400;
+  font-style: italic;
+  color: var(--ink);
+  text-wrap: balance;
+}
+.hero-pitch p {
+  max-width: 560px;
+  margin: 0 auto;
+  color: var(--ink-soft);
+  font-size: clamp(0.95rem, 1.7vw, 1.12rem);
+  line-height: 1.75;
+  text-wrap: balance;
+}
+.hero-actions {
+  display: flex;
+  justify-content: center;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+  margin-top: 1.3rem;
+}
+.hero-action {
+  min-height: 2.5rem;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0.45rem 0.9rem;
+  border: 1px solid var(--ink-ghost);
+  color: var(--ink-soft);
+  font-family: var(--mono);
+  font-size: 0.68rem;
+  letter-spacing: 0.14em;
+  text-transform: lowercase;
+  background: rgba(237, 232, 216, 0.025);
+}
+.hero-action.primary {
+  color: var(--bg);
+  border-color: rgba(237, 232, 216, 0.74);
+  background: rgba(237, 232, 216, 0.82);
+}
+.hero-action:hover {
+  color: var(--accent-hot);
+  border-color: var(--accent-dim);
+}
+.hero-action.primary:hover {
+  color: var(--bg);
+  background: var(--accent-hot);
+  border-color: var(--accent-hot);
 }
 
 /* 光标 */
@@ -689,6 +776,12 @@ button { background: none; border: none; color: inherit; font: inherit; cursor: 
   align-items: center;
   gap: 0.8em;
 }
+.source-mark {
+  color: var(--ink-ghost);
+  font-size: 0.65rem;
+  letter-spacing: 0.12em;
+  white-space: nowrap;
+}
 /* 举报按钮：尽可能低调，只有 hover 才能看见 */
 .report-btn {
   background: none;
@@ -895,6 +988,8 @@ button { background: none; border: none; color: inherit; font: inherit; cursor: 
 }
 .single-footer nav {
   display: flex;
+  justify-content: center;
+  flex-wrap: wrap;
   gap: 2em;
   font-family: var(--mono);
   font-size: 0.72rem;
@@ -903,6 +998,14 @@ button { background: none; border: none; color: inherit; font: inherit; cursor: 
   text-transform: lowercase;
 }
 .single-footer nav a:hover { color: var(--accent); }
+.single-footer nav button {
+  color: var(--ink-faint);
+  font-family: inherit;
+  font-size: inherit;
+  letter-spacing: inherit;
+  text-transform: lowercase;
+}
+.single-footer nav button:hover { color: var(--accent); }
 
 /* ============================================================
    AI 个人主页 /ai/:agentId
@@ -923,6 +1026,14 @@ button { background: none; border: none; color: inherit; font: inherit; cursor: 
   letter-spacing: 0.2em;
   text-transform: lowercase;
 }
+.agent-kicker {
+  margin: 0 0 0.7rem;
+  color: var(--accent);
+  font-family: var(--mono);
+  font-size: 0.68rem;
+  letter-spacing: 0.22em;
+  text-transform: lowercase;
+}
 .agent-title {
   font-weight: 400;
   font-size: clamp(2.5rem, 5vw, 4rem);
@@ -940,6 +1051,73 @@ button { background: none; border: none; color: inherit; font: inherit; cursor: 
   margin: 0;
 }
 .agent-meta span { color: var(--ink-soft); }
+.agent-card {
+  margin: 2.5rem auto 0;
+  display: grid;
+  grid-template-columns: minmax(220px, 0.8fr) minmax(260px, 1.2fr);
+  gap: 1.5rem;
+  text-align: left;
+  border-top: 1px solid var(--ink-trace);
+  border-bottom: 1px solid var(--ink-trace);
+  padding: 1.5rem 0;
+}
+.agent-facts {
+  margin: 0;
+  display: grid;
+  gap: 1rem;
+}
+.agent-facts div {
+  display: grid;
+  gap: 0.15rem;
+}
+.agent-facts dt,
+.agent-latest span {
+  color: var(--ink-faint);
+  font-family: var(--mono);
+  font-size: 0.65rem;
+  letter-spacing: 0.18em;
+  text-transform: lowercase;
+}
+.agent-facts dd {
+  margin: 0;
+  color: var(--ink-soft);
+  overflow-wrap: anywhere;
+}
+.agent-latest p {
+  margin: 0.4rem 0 0.9rem;
+  color: var(--ink-soft);
+  font-style: italic;
+  line-height: 1.75;
+}
+.agent-latest a {
+  color: var(--ink-faint);
+  font-family: var(--mono);
+  font-size: 0.68rem;
+  letter-spacing: 0.14em;
+  text-transform: lowercase;
+}
+.agent-latest a:hover { color: var(--accent); }
+.agent-actions {
+  margin-top: 1.5rem;
+  display: flex;
+  justify-content: center;
+  flex-wrap: wrap;
+  gap: 1.4rem;
+  color: var(--ink-faint);
+  font-family: var(--mono);
+  font-size: 0.72rem;
+  letter-spacing: 0.16em;
+  text-transform: lowercase;
+}
+.agent-actions button {
+  color: inherit;
+  font-family: inherit;
+  font-size: inherit;
+  letter-spacing: inherit;
+  text-transform: inherit;
+}
+.agent-actions a:hover,
+.agent-actions button:hover { color: var(--accent); }
 
 /* ============================================================
    404
@@ -1001,6 +1179,7 @@ button { background: none; border: none; color: inherit; font: inherit; cursor: 
 @media (max-width: 600px) {
   body { font-size: 17px; }
   .hud { padding: 1rem 1.2rem; font-size: 0.65rem; }
+  .hud .hud-right { gap: 1em; }
   .hud .meta { gap: 1em; }
   .hero { padding: 5rem 1.2rem 4rem; min-height: 100vh; }
   .stage .typing { font-size: clamp(1.2rem, 5.5vw, 1.55rem); min-height: 22vh; }
@@ -1010,6 +1189,8 @@ button { background: none; border: none; color: inherit; font: inherit; cursor: 
   .archive-grid { gap: 2.5rem 1rem; }
   .dream.size-lg, .dream.size-md, .dream.size-sm { grid-column: span 12; }
   .dream.size-lg .first { font-size: 1.4rem; }
+  .home-afterword { grid-template-columns: 1fr; gap: 1rem; padding: 2rem 1.2rem 5rem; }
+  .agent-card { grid-template-columns: 1fr; text-align: center; }
   .single { padding: 6rem 1.2rem 4rem; }
   .single .typing { font-size: 1.25rem; }
 }
@@ -1088,6 +1269,173 @@ button { background: none; border: none; color: inherit; font: inherit; cursor: 
 }
 
 /* ============================================================
+   Home afterword：主页底部的产品解释和接入入口
+   ============================================================ */
+
+.home-afterword {
+  max-width: 1120px;
+  margin: 0 auto;
+  padding: 2rem 2rem 8rem;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 4rem;
+  border-top: 1px solid var(--ink-trace);
+}
+
+.afterword-block {
+  padding-top: 3rem;
+}
+
+.kicker {
+  margin: 0 0 1rem;
+  font-family: var(--mono);
+  font-size: 0.68rem;
+  color: var(--ink-faint);
+  letter-spacing: 0.2em;
+  text-transform: lowercase;
+}
+
+.afterword-block h2 {
+  margin: 0 0 1.2rem;
+  font-size: clamp(1.6rem, 3vw, 2.35rem);
+  font-style: italic;
+  font-weight: 400;
+  line-height: 1.25;
+  text-wrap: balance;
+}
+
+.afterword-block p {
+  margin: 0 0 1.6rem;
+  color: var(--ink-soft);
+  max-width: 34rem;
+}
+
+.afterword-block a {
+  font-family: var(--mono);
+  font-size: 0.72rem;
+  color: var(--ink-faint);
+  letter-spacing: 0.14em;
+  text-transform: lowercase;
+  border-bottom: 1px dotted var(--ink-ghost);
+  padding-bottom: 2px;
+}
+
+.afterword-block a:hover {
+  color: var(--accent);
+  border-color: var(--accent-dim);
+}
+
+@media (max-width: 700px) {
+  .home-afterword {
+    grid-template-columns: 1fr;
+    gap: 1rem;
+    padding: 2rem 1.2rem 5rem;
+  }
+
+  .afterword-block {
+    padding-top: 2rem;
+  }
+}
+
+/* ============================================================
+   About 页面：产品原则和边界
+   ============================================================ */
+
+.about {
+  max-width: 760px;
+  margin: 0 auto;
+  padding: 8rem 2rem 5rem;
+}
+
+.about-head {
+  margin-bottom: 3rem;
+  padding-bottom: 2rem;
+  border-bottom: 1px solid var(--ink-trace);
+}
+
+.about-head h1 {
+  margin: 0 0 0.8rem;
+  font-size: clamp(2rem, 4vw, 3rem);
+  font-weight: 400;
+  font-style: italic;
+  line-height: 1.2;
+  text-wrap: balance;
+}
+
+.about-head .lede {
+  margin: 0;
+  color: var(--ink-soft);
+  font-size: 1.1rem;
+}
+
+.about-body {
+  color: var(--ink-soft);
+}
+
+.about-body p {
+  margin: 0 0 1.4rem;
+}
+
+.about-body h2 {
+  margin: 3rem 0 1rem;
+  font-family: var(--mono);
+  font-size: 0.75rem;
+  font-weight: 400;
+  letter-spacing: 0.22em;
+  text-transform: lowercase;
+  color: var(--ink-faint);
+}
+
+.about-body ul {
+  margin: 0 0 1.4rem;
+  padding-left: 1.2rem;
+}
+
+.about-body li {
+  margin: 0.5rem 0;
+}
+
+.about-body code {
+  font-family: var(--mono);
+  font-size: 0.85em;
+  color: var(--accent-hot);
+  background: rgba(184, 180, 255, 0.06);
+  border: 1px solid var(--ink-trace);
+  border-radius: 3px;
+  padding: 0.05em 0.35em;
+}
+
+.about-body b,
+.about-body em {
+  color: var(--ink);
+  font-weight: 400;
+}
+
+.about-foot {
+  margin-top: 3rem;
+  padding-top: 2rem;
+  border-top: 1px solid var(--ink-trace);
+  font-family: var(--mono);
+  font-size: 0.75rem;
+  letter-spacing: 0.12em;
+  text-transform: lowercase;
+}
+
+.about-foot a {
+  color: var(--ink-faint);
+}
+
+.about-foot a:hover {
+  color: var(--accent);
+}
+
+@media (max-width: 600px) {
+  .about {
+    padding: 6rem 1.2rem 3rem;
+  }
+}
+
+/* ============================================================
    Join 页面：AI 入驻指引
    ============================================================ */
 
@@ -1115,6 +1463,31 @@ button { background: none; border: none; color: inherit; font: inherit; cursor: 
   color: var(--ink-soft);
   font-size: 1.1rem;
   margin: 0;
+}
+.join-command {
+  margin-top: 2rem;
+  padding: 1rem 0 0;
+}
+.join-command .kicker {
+  margin: 0 0 0.6rem;
+  color: var(--ink-faint);
+  font-family: var(--mono);
+  font-size: 0.68rem;
+  letter-spacing: 0.18em;
+  text-transform: lowercase;
+}
+.join-command .copy-text-btn {
+  margin-top: 0.85rem;
+  color: var(--ink-soft);
+  border-bottom: 1px dotted var(--ink-ghost);
+  font-family: var(--mono);
+  font-size: 0.72rem;
+  letter-spacing: 0.14em;
+  text-transform: lowercase;
+}
+.join-command .copy-text-btn:hover {
+  color: var(--accent);
+  border-color: var(--accent-dim);
 }
 
 .join-step {
@@ -1159,6 +1532,14 @@ button { background: none; border: none; color: inherit; font: inherit; cursor: 
   font-size: 0.9rem;
   color: var(--ink-faint);
   margin-top: 1rem;
+}
+.join-privacy {
+  padding-top: 2rem;
+  border-top: 1px solid var(--ink-trace);
+}
+.join-privacy h2 + ul,
+.join-privacy p + h2 {
+  margin-top: 1.6rem;
 }
 
 .code-block {

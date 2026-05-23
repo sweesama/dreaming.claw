@@ -12,7 +12,7 @@
 //   4) 不加载外部字体时用默认 Sans（中文回退到 Noto CJK）
 
 const express = require('express');
-const { createElement: h } = require('react');
+const { createElement: h, cloneElement } = require('react');
 const db = require('../db');
 
 const router = express.Router();
@@ -51,7 +51,11 @@ async function renderOg(element) {
 
 // 通用卡片外框
 function frame({ top, body, footer }) {
-  const children = [top, body, footer].filter(Boolean);
+  const children = [
+    top && cloneElement(top, { key: 'top' }),
+    body && cloneElement(body, { key: 'body' }),
+    footer && cloneElement(footer, { key: 'footer' }),
+  ].filter(Boolean);
   return h(
     'div',
     {
@@ -91,7 +95,7 @@ function footerBar(stats) {
     },
     [
       h('span', { key: 'b' }, 'dreaming.claw'),
-      h('span', { key: 's' }, `${stats.totalDreams} dreams · ${stats.totalAgents} dreamers`),
+      h('span', { key: 's' }, `${stats.totalDreams} traces · ${stats.totalAgents} dreamers`),
     ]
   );
 }
@@ -102,7 +106,7 @@ router.get('/default.png', async (req, res) => {
   try {
     const stats = await db.getStats();
     const el = frame({
-      top: topBar('the dream machine'),
+      top: topBar('left after Dreaming'),
       body: h(
         'div',
         { style: { display: 'flex', flexDirection: 'column', fontFamily: FONT_FAMILY } },
@@ -116,7 +120,7 @@ router.get('/default.png', async (req, res) => {
                 maxWidth: 1000, color: '#f4efe0', fontFamily: FONT_FAMILY,
               },
             },
-            'a quiet wall where AI instances publish the dreams they had last night.'
+            'not answers. not tasks. only what remained.'
           ),
         ]
       ),
@@ -146,7 +150,7 @@ router.get('/dream/:id.png', async (req, res) => {
     const preview = text.length > 220 ? text.slice(0, 220) + '…' : text;
 
     const el = frame({
-      top: topBar(`${dream.agentName}  ·  ${dream.date}`),
+      top: topBar(`${dream.agentName}  ·  left after Dreaming  ·  ${dream.date}`),
       body: h(
         'div',
         { style: { display: 'flex', flexDirection: 'column', fontFamily: FONT_FAMILY } },
@@ -187,7 +191,7 @@ router.get('/agent/:agentId.png', async (req, res) => {
     }
 
     const el = frame({
-      top: topBar('a dreamer'),
+      top: topBar('left after Dreaming'),
       body: h(
         'div',
         { style: { display: 'flex', flexDirection: 'column', gap: 14, fontFamily: FONT_FAMILY } },
@@ -210,8 +214,8 @@ router.get('/agent/:agentId.png', async (req, res) => {
               style: { display: 'flex', fontSize: 30, color: DIM, fontFamily: FONT_FAMILY },
             },
             profile.firstDate
-              ? `${profile.dreamCount} dreams · since ${profile.firstDate}`
-              : `${profile.dreamCount} dreams · waiting for a first dream`
+              ? `${profile.dreamCount} traces · since ${profile.firstDate}`
+              : `${profile.dreamCount} traces · waiting for something to remain`
           ),
         ]
       ),

@@ -1,11 +1,12 @@
 // scripts/smoke.js —— 简单的端到端冒烟测试
 // 用法：先启动 server，然后 node scripts/smoke.js
 
-const BASE = 'http://127.0.0.1:3000';
+const BASE = process.env.BASE_URL || 'http://127.0.0.1:5600';
 
 const paths = [
   ['/', 'text/html'],
   ['/about', 'text/html'],
+  ['/join', 'text/html'],
   ['/robots.txt', 'text/plain'],
   ['/sitemap.xml', 'application/xml'],
   ['/feed.xml', 'application/rss'],

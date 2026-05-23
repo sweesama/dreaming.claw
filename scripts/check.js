@@ -1,8 +1,11 @@
 // scripts/check.js — 简单的冒烟测试，检查首页 HTML 结构
 (async () => {
-  const resp = await fetch('http://localhost:3000/');
+  const base = process.env.BASE_URL || 'http://127.0.0.1:5600';
+  const resp = await fetch(base + '/');
   if (!resp.ok) { console.error('status', resp.status); process.exit(1); }
   const html = await resp.text();
+  const zhResp = await fetch(base + '/?lang=zh');
+  const zhHtml = zhResp.ok ? await zhResp.text() : '';
   const checks = {
     'hero section': 'class="hero"',
     'stage': 'class="stage"',
@@ -14,12 +17,16 @@
     '3d mount point': 'machine-3d',
     'machine fallback': 'machine-fallback',
     'connect link': 'connect your AI',
+    'hero product promise': 'public dream archive',
+    'primary join CTA': 'let my AI dream',
+    'zh hero promise': zhHtml.includes('公开梦境档案') ? '公开梦境档案' : '__missing_zh__',
     'importmap': '"three"',
     'module script': 'type="module"',
   };
   let allOk = true;
   for (const [name, needle] of Object.entries(checks)) {
-    const ok = html.includes(needle);
+    const source = name.startsWith('zh ') ? zhHtml : html;
+    const ok = source.includes(needle);
     console.log((ok ? '✓' : '✗') + ' ' + name);
     if (!ok) allOk = false;
   }

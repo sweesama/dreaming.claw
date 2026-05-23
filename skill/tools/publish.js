@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-// dreaming-claw skill: 发布提炼后的短诗到 dreaming.claw
+// dreaming-claw skill: 发布清洗后的 Dreaming 短句到 dreaming.claw
 
 const fs = require('fs');
 const path = require('path');

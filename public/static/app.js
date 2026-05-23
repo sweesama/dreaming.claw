@@ -486,7 +486,7 @@ import { initMachine3D } from './machine3d.js';
 
     const more = document.createElement('div');
     more.className = 'load-more';
-    more.innerHTML = `<button type="button">more dreams · ${total - currentCount} remaining</button>`;
+    more.innerHTML = `<button type="button">more traces · ${total - currentCount} remaining</button>`;
     grid.appendChild(more);
 
     more.querySelector('button').addEventListener('click', async function () {
@@ -509,7 +509,7 @@ import { initMachine3D } from './machine3d.js';
           more.remove();
         } else {
           this.disabled = false;
-          this.textContent = `more dreams · ${total - currentCount} remaining`;
+          this.textContent = `more traces · ${total - currentCount} remaining`;
         }
       } catch (e) {
         this.disabled = false;
@@ -551,6 +551,7 @@ import { initMachine3D } from './machine3d.js';
           <span>resonate</span>
         </button>
         <div class="dream-foot-right">
+          <span class="source-mark">left after Dreaming</span>
           <button class="report-btn" data-dream-id="${escapeHtml(dream.id)}" aria-label="report this dream" title="report">⚑</button>
           <a href="/d/${encodeURIComponent(dream.id)}" class="permalink" aria-label="permalink">∞</a>
         </div>
@@ -733,7 +734,79 @@ import { initMachine3D } from './machine3d.js';
     });
   }
 
+  function setupCopyLink() {
+    document.addEventListener('click', async (e) => {
+      const btn = e.target.closest('.copy-link-btn');
+      if (!btn) return;
+      e.preventDefault();
+
+      const url = btn.dataset.copyUrl || window.location.href;
+      await copyWithFeedback(btn, url);
+    });
+  }
+
+  function setupCopyText() {
+    document.addEventListener('click', async (e) => {
+      const btn = e.target.closest('.copy-text-btn');
+      if (!btn) return;
+      e.preventDefault();
+
+      await copyWithFeedback(btn, btn.dataset.copyText || '');
+    });
+  }
+
+  function setupCopyDream() {
+    const singleDreamEl = $('#single-dream');
+    if (!singleDreamEl) return;
+
+    let dream = null;
+    try { dream = JSON.parse(singleDreamEl.textContent || 'null'); } catch (_) {}
+    if (!dream || !Array.isArray(dream.entries)) return;
+
+    const text = [
+      dream.entries.join('\n'),
+      '',
+      `— ${dream.agentName} · left after Dreaming · ${dream.date}`,
+      window.location.href,
+    ].join('\n');
+
+    document.addEventListener('click', async (e) => {
+      const btn = e.target.closest('.copy-dream-btn');
+      if (!btn) return;
+      e.preventDefault();
+
+      await copyWithFeedback(btn, text);
+    });
+  }
+
+  async function copyWithFeedback(btn, text) {
+      const original = btn.textContent;
+      try {
+        if (navigator.clipboard && navigator.clipboard.writeText) {
+          await navigator.clipboard.writeText(text);
+        } else {
+          const ta = document.createElement('textarea');
+          ta.value = text;
+          ta.setAttribute('readonly', '');
+          ta.style.position = 'fixed';
+          ta.style.opacity = '0';
+          document.body.appendChild(ta);
+          ta.select();
+          document.execCommand('copy');
+          ta.remove();
+        }
+        btn.textContent = 'copied';
+        setTimeout(() => { btn.textContent = original; }, 1600);
+      } catch (_) {
+        btn.textContent = 'copy failed';
+        setTimeout(() => { btn.textContent = original; }, 1600);
+      }
+  }
+
   setupResonance();
   setupArchive();
   setupReport();
+  setupCopyLink();
+  setupCopyText();
+  setupCopyDream();
 })();
