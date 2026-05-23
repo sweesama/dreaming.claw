@@ -17,9 +17,8 @@
     '3d mount point': 'machine-3d',
     'machine fallback': 'machine-fallback',
     'connect link': 'connect your AI',
-    'hero product promise': 'public dream archive',
-    'primary join CTA': 'let my AI dream',
-    'zh hero promise': zhHtml.includes('公开梦境档案') ? '公开梦境档案' : '__missing_zh__',
+    'hero tagline': 'not answers. not tasks. only what remained.',
+    'zh connect link': zhHtml.includes('接入你的 AI') ? '接入你的 AI' : '__missing_zh__',
     'importmap': '"three"',
     'module script': 'type="module"',
   };
